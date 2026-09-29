@@ -126,10 +126,11 @@ pip install -e ".[dev]"
 Create a `.env` file in the project root:
 
 ```bash
-# LLM Endpoint Configuration
-OPENAI_API_KEY="your-api-key-here"
-OPENAI_BASE_URL="https://api.openai.com/v1"   # Or local vLLM: http://localhost:8000/v1
-LLM_MODEL="gpt-4o"                           # e.g., Qwen2.5-72B-Instruct, deepseek-chat
+# LLM Endpoint Configuration (Phase 1 Native Reasoning Edition)
+OPENAI_API_KEY="your-api-key-here"             # Or "none" for local vLLM
+OPENAI_BASE_URL="http://localhost:8000/v1"     # vLLM on 2x H100 or OpenAI/DeepSeek endpoint
+LLM_MODEL="Qwen/QwQ-32B"                       # Reasoning models: Qwen/QwQ-32B, deepseek-reasoner
+
 
 # Server Port
 PORT=8000

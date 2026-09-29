@@ -18,7 +18,7 @@ from engine.core.state import JinShuState
 # ── LLM 配置（遵循 AGENTS.md 规范） ───────────────────────────────
 _API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
 _BASE_URL = os.getenv("OPENAI_BASE_URL", "https://api.deepseek.com/v1")
-_MODEL = os.getenv("LLM_MODEL", "deepseek-chat")
+_MODEL = os.getenv("LLM_MODEL", "Qwen/QwQ-32B")
 
 
 async def summarizer_node(state: JinShuState) -> dict:
@@ -68,9 +68,19 @@ async def summarizer_node(state: JinShuState) -> dict:
     except Exception as e:
         summary = f"汇总报告生成失败: {e}"
 
-    events.append({"event": "final_chunk", "expert": "L1_Supervisor", "text": f"\n\n{summary}"})
+    import re
+    thought_match = re.search(r"<think>([\s\S]*?)</think>", summary)
+    if thought_match:
+        thought_text = thought_match.group(1).strip()
+        events.append({"event": "thought", "expert": "L1_Supervisor", "text": thought_text})
+        clean_summary = re.sub(r"<think>[\s\S]*?</think>", "", summary).strip()
+    else:
+        clean_summary = summary
+
+    events.append({"event": "final_chunk", "expert": "L1_Supervisor", "text": f"\n\n{clean_summary}"})
 
     return {
-        "final_summary": summary,
+        "final_summary": clean_summary,
         "stream_events": events
     }
+

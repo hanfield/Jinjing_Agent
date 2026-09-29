@@ -49,7 +49,7 @@ class BaseAgent:
         # 独立异步客户端池
         self.api_key = os.getenv("OPENAI_API_KEY", "").strip()
         self.base_url = os.getenv("OPENAI_BASE_URL", "https://api.deepseek.com/v1")
-        self.model = os.getenv("LLM_MODEL", "deepseek-chat")
+        self.model = os.getenv("LLM_MODEL", "Qwen/QwQ-32B")
         print(f"[DEBUG BaseAgent] agent_id={self.agent_id} base_url={self.base_url} model={self.model}")
         headers = {"Authorization": f"Bearer {self.api_key}"} if self.api_key else {}
         headers["Connection"] = "close"

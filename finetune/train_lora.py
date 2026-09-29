@@ -79,14 +79,17 @@ def load_model_and_tokenizer(base_model: str, use_4bit: bool = True, is_reward_m
     return model, tokenizer
 
 
-def get_lora_config(r=16, alpha=32, task_type=TaskType.CAUSAL_LM):
-    """获取通用的 LoRA 配置"""
+def get_lora_config(r=32, alpha=64, task_type=TaskType.CAUSAL_LM):
+    """
+    获取适用于原生推理模型 (QwQ / DeepSeek-R1-Distill) 的全线性层 LoRA 配置。
+    包含所有注意力与 MLP 投影层，最大程度保留模型的内置长思维链逻辑与因果推导突触。
+    """
     return LoraConfig(
         task_type=task_type,
         r=r,
         lora_alpha=alpha,
         lora_dropout=0.05,
-        target_modules=["q_proj", "k_proj", "v_proj", "o_proj"], 
+        target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"], 
         bias="none",
     )
 
@@ -100,17 +103,25 @@ def train_sft(args):
     print("\n" + "=" * 50 + "\n🚀 启动 Phase 1: SFT 监督微调\n" + "=" * 50)
     model, tokenizer = load_model_and_tokenizer(args.base_model, args.use_4bit)
     
-    # 构建适合 SFT 的格式化文本
+    # 构建适合 SFT 的格式化文本 (原生支持长思维链 <think> 结构)
     raw_data = []
     with open(args.data_path, "r", encoding="utf-8") as f:
         for line in f:
             if line.strip():
                 sample = json.loads(line)
-                user_msg = f"{sample['instruction']}\n\n{sample.get('input', '')}"
+                user_msg = f"{sample['instruction']}\n\n{sample.get('input', '')}".strip()
+                
+                # 如果样本带有隐式思考推演过程，按 DeepSeek/QwQ 原生协议拼装 <think>
+                thought_str = sample.get("thought") or sample.get("thinking") or sample.get("reasoning_content")
+                if thought_str:
+                    assistant_content = f"<think>\n{thought_str.strip()}\n</think>\n{sample['output'].strip()}"
+                else:
+                    assistant_content = sample['output'].strip()
+
                 text = (
-                    f"<|im_start|>system\n你是金枢，智能运维助手。<|im_end|>\n"
+                    f"<|im_start|>system\n你是金枢，金融级数据中心全栈智能运维助手。在执行排障前必须进行因果假设演绎与风险心智推演。<|im_end|>\n"
                     f"<|im_start|>user\n{user_msg}<|im_end|>\n"
-                    f"<|im_start|>assistant\n{sample['output']}<|im_end|>"
+                    f"<|im_start|>assistant\n{assistant_content}<|im_end>"
                 )
                 raw_data.append({"text": text})
                 
@@ -124,8 +135,8 @@ def train_sft(args):
         bf16=True, # H100 强推 bfloat16
         logging_steps=10,
         save_strategy="epoch",
-        deepspeed=args.deepspeed, # 接入 DeepSpeed ZeRO 配置
-        gradient_checkpointing=True, # Qwen2.5-32B 必须开启梯度检查点防止 OOM
+        deepspeed=args.deepspeed, # 接入 DeepSpeed ZeRO-3 配置
+        gradient_checkpointing=True, # 32B 原生推理模型开启梯度检查点防止 OOM
     )
 
     trainer = SFTTrainer(
@@ -133,7 +144,7 @@ def train_sft(args):
         train_dataset=dataset,
         peft_config=get_lora_config(),
         dataset_text_field="text",
-        max_seq_length=2048,
+        max_seq_length=args.max_seq_length, # 升级为 8192 甚至更高，容纳长思维链
         tokenizer=tokenizer,
         args=training_args,
     )
@@ -232,9 +243,10 @@ def train_dpo(args):
         ref_model=None, # TRL 内部会自动复制一份 adapter 作为参考模型
         peft_config=get_lora_config(),
         args=training_args,
-        beta=0.1, # DPO 偏好散度权重 (KL Penalty)
+        beta=0.05, # 推理模型建议 0.05，避免 KL 惩罚过大破坏思考流
         train_dataset=dataset,
         tokenizer=tokenizer,
+        max_length=args.max_seq_length,
     )
     
     trainer.train()
@@ -246,16 +258,18 @@ def train_dpo(args):
 # ── 路由分发 ──────────────────────────────────────────────
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="金枢全链路大模型微调流水线 (SFT -> RLHF -> DPO)")
+    parser = argparse.ArgumentParser(description="金枢全链路大模型微调流水线 (SFT -> RLHF -> DPO for Reasoning Models)")
     parser.add_argument("--stage", type=str, required=True, choices=["sft", "reward", "ppo", "dpo"],
                         help="选择训练阶段：sft, reward, ppo, dpo")
-    parser.add_argument("--base_model", type=str, default="Qwen/Qwen2.5-32B-Instruct")
+    parser.add_argument("--base_model", type=str, default="Qwen/QwQ-32B",
+                        help="基座模型：推荐 Qwen/QwQ-32B 或 deepseek-ai/DeepSeek-R1-Distill-Qwen-32B")
     parser.add_argument("--data_path", type=str, default="finetune/train_data.jsonl", help="SFT 训练数据")
     parser.add_argument("--dpo_data_path", type=str, default="finetune/dpo_data.jsonl", help="RLHF/DPO 偏好对齐数据")
-    parser.add_argument("--output_dir", type=str, default="finetune/output/jinshu_qwen32b")
+    parser.add_argument("--output_dir", type=str, default="finetune/output/jinshu_qwq32b")
     parser.add_argument("--epochs", type=int, default=3)
-    parser.add_argument("--batch_size", type=int, default=8)
-    parser.add_argument("--lr", type=float, default=2e-5) # 32B模型学习率调低
+    parser.add_argument("--batch_size", type=int, default=4)
+    parser.add_argument("--lr", type=float, default=1e-5) # 32B 推理模型学习率建议 1e-5，保护原生思维链
+    parser.add_argument("--max_seq_length", type=int, default=8192, help="长文本最大长度，确保思维链不被截断")
     parser.add_argument("--use_4bit", action="store_true", default=False, help="H100 显存充足，建议关闭 4bit 走全 bf16")
     parser.add_argument("--deepspeed", type=str, default="finetune/ds_config.json", help="DeepSpeed 配置文件路径")
     

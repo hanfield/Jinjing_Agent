@@ -33,15 +33,17 @@ def run_mlx_finetune():
         print("❌ 错误：请先运行数据清洗脚本生成训练素材")
         return
 
-    # 基座模型名称：直接指向 HuggingFace 开源库，脚本会自动下载解压到本地
-    model_name = "Qwen/Qwen2.5-7B"
+    # 基座模型名称：推荐 Apple 统一显存适配版 QwQ-32B (4-bit 量化) 或 DeepSeek-R1-Distill-Qwen-14B
+    # 48GB 统一内存可流畅训练与微调
+    model_name = os.getenv("MLX_MODEL", "mlx-community/QwQ-32B-4bit")
 
-    # ========= 炼丹炉调参旋钮（非常硬核的行业词汇） =========
-    batch_size = "4"       # 并行处理数量（你的 48G 可以轻松调到更大的 8 甚至 16，缩短整体时间）
+    # ========= 炼丹炉调参旋钮（针对 Apple Silicon M 系列芯片深度调优） =========
+    batch_size = "4"       # 统一内存 48G 可跑 batch_size=4
     lora_layers = "16"     # 影响模型的几层大脑突触？16 是标准推荐
-    learning_rate = "1e-4" # 学习率：决定了它学新东西的步子迈得多大
-    iters = "500"          # 训练迭代总步数。要吃透机房资料，500步算预热，实际可改 2000
+    learning_rate = "2e-5" # 针对推理模型调低学习率，保护原生思维链
+    iters = "500"          # 训练迭代总步数。500步预热，实际可改 2000
     # ========================================================
+
 
     print(f"📦 目标基座模型：{model_name}")
     print(f"⚙️ 参数调优档案：Batch={batch_size} | Iters={iters} | LoRA-L={lora_layers}")

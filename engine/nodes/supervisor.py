@@ -15,7 +15,7 @@ from engine.core.state import JinShuState
 # ── LLM 配置 ─────────────────────────────────────────────────────────
 _API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
 _BASE_URL = os.getenv("OPENAI_BASE_URL", "https://api.deepseek.com/v1")
-_MODEL = os.getenv("LLM_MODEL", "deepseek-chat")
+_MODEL = os.getenv("LLM_MODEL", "Qwen/QwQ-32B")
 
 _SUPERVISOR_SYSTEM_PROMPT = """你是金枢 3.0 L1 路由分诊台 (Supervisor Agent)。
 你的唯一职责是阅读告警或用户提问，分析需要调度哪些 L2 领域专家介入。
@@ -71,16 +71,28 @@ async def supervisor_node(state: JinShuState) -> dict:
             resp.raise_for_status()
             content = resp.json()["choices"][0]["message"]["content"].strip()
 
+            # 清理 <think>...</think> 推理模型的思维链包裹
+            import re
+            cleaned_content = re.sub(r"<think>[\s\S]*?</think>", "", content).strip()
+
             # 清理 markdown 代码块包裹
             for prefix in ("```json", "```"):
-                if content.startswith(prefix):
-                    content = content[len(prefix):]
-            if content.endswith("```"):
-                content = content[:-3]
+                if cleaned_content.startswith(prefix):
+                    cleaned_content = cleaned_content[len(prefix):]
+            if cleaned_content.endswith("```"):
+                cleaned_content = cleaned_content[:-3]
 
-            parsed = json.loads(content.strip())
+            # 尝试正向解析或正则提取 JSON 数组
+            cleaned_content = cleaned_content.strip()
+            try:
+                parsed = json.loads(cleaned_content)
+            except Exception:
+                match = re.search(r"\[[\s\S]*?\]", cleaned_content)
+                parsed = json.loads(match.group(0)) if match else None
+
             if isinstance(parsed, list) and all(isinstance(e, str) for e in parsed):
                 experts = parsed
+
 
     except Exception as exc:
         print(f"[Supervisor] LLM 分诊异常，启用降级路由: {exc}")

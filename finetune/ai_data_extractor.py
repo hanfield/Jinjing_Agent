@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 load_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env"))
 API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
 BASE_URL = os.getenv("OPENAI_BASE_URL", "https://api.deepseek.com/v1").rstrip("/")
-MODEL = os.getenv("LLM_MODEL", "deepseek-chat")
+MODEL = os.getenv("LLM_MODEL", "Qwen/QwQ-32B")
 
 SYSTEM_PROMPT = """
 你是一个数据中心资深运维总监兼 AI 数据工程专家。

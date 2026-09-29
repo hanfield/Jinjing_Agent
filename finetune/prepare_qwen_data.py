@@ -25,14 +25,14 @@ PROMPT_TEMPLATE = """
 2. resolve_spatial_topology(asset_id: str, dc_id: str) - 空间拓扑溯源
 
 【生成要求】：
-请生成一段 JSON，模拟真实人机对话，包含完整的工具调用过程。
+请生成一段 JSON，模拟真实人机对话，包含完整的因果演绎思考过程（reasoning_content）与工具调用。
 必须输出合法的 JSON 格式，不要包裹在 Markdown 代码块中！不要输出其他说明文字。
 JSON 的格式如下：
 {{
   "messages": [
     {{
       "role": "system",
-      "content": "你是金枢智能运维 Agent..."
+      "content": "你是金枢智能运维 Agent，具备因果假说演绎与风险心智推演能力..."
     }},
     {{
       "role": "user",
@@ -40,7 +40,8 @@ JSON 的格式如下：
     }},
     {{
       "role": "assistant",
-      "content": "思考过程（如果不调用工具则为空）",
+      "reasoning_content": "详细的思考过程：1. 分析表象告警；2. 构建3个互斥的根因假设；3. 规划验证所需的只读工具。",
+      "content": "我正在为您排查根因。首先验证动环与机柜拓扑关系...",
       "tool_calls": [
         {{
           "type": "function",
@@ -58,7 +59,8 @@ JSON 的格式如下：
     }},
     {{
       "role": "assistant",
-      "content": "根据工具返回的结果，给出的最终专家建议"
+      "reasoning_content": "分析工具返回结果，排除假设A和B，证实假设C（局部冷通道泄漏），评估处置风险...",
+      "content": "根据工具返回的结果，给出的最终专家建议与结构化 SOP 卡片"
     }}
   ]
 }}
@@ -67,7 +69,7 @@ JSON 的格式如下：
 async def call_llm_to_inflate(case_text: str) -> dict:
     api_key = os.getenv("OPENAI_API_KEY", "")
     base_url = os.getenv("OPENAI_BASE_URL", "https://api.deepseek.com/v1")
-    model = os.getenv("LLM_MODEL", "deepseek-chat")
+    model = os.getenv("LLM_MODEL", "Qwen/QwQ-32B")
 
     prompt = PROMPT_TEMPLATE.format(case_text=case_text)
     

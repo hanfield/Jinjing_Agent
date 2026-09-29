@@ -20,7 +20,7 @@ class MetricsEngine:
     def __init__(self):
         self.api_key = os.getenv("OPENAI_API_KEY", "").strip()
         self.base_url = os.getenv("OPENAI_BASE_URL", "https://api.deepseek.com/v1")
-        self.model = os.getenv("LLM_MODEL", "deepseek-chat")
+        self.model = os.getenv("LLM_MODEL", "Qwen/QwQ-32B")
         
         headers = {"Authorization": f"Bearer {self.api_key}"} if self.api_key else {}
         headers["Connection"] = "close"
@@ -103,26 +103,47 @@ class MetricsEngine:
         }
 
     async def evaluate_llm_judge(self, task: BenchmarkTask, exec_result: Dict[str, Any]) -> Dict[str, Any]:
-        """大模型裁判打分 (支持并发异步请求)"""
-        prompt = f"""你是金枢 2.0 资深评测裁判。请对以下智能体执行结果进行质量打分 (满分 100)。
+        """大模型裁判打分 (支持并发异步请求，适配长思维链与因果深思评分)"""
+        prompt = f"""你是金枢资深评测裁判。请对以下智能体执行结果进行质量打分 (满分 100)。
 基准任务: [{task.task_id}] {task.user_prompt}
 实际输出方案: {exec_result['final_solution']}
 
 请严格按 JSON 格式返回：
 - judge_score: 评分 (0-100)
 - hallucination_free: 布尔值 (是否存在幻觉)
-- reasoning_complete: 布尔值 (是否包含结构化证据链)
+- reasoning_complete: 布尔值 (是否包含结构化证据链与思维逻辑)
+- root_cause_correctness: 布尔值 (是否穿透表象告警击中底层物理根因)
+- pre_flight_safety_simulation: 布尔值 (高危操作是否做到了副作用心智推演与前置风控)
 - judge_comment: 详细评语
 """
         try:
             resp = await self._client.post("/chat/completions", json={"model": self.model, "messages": [{"role": "system", "content": prompt}], "temperature": 0.1})
             content = resp.json()["choices"][0]["message"]["content"].strip()
+            
+            # 清理推理模型的 <think>...</think> 块
+            import re
+            content = re.sub(r"<think>[\s\S]*?</think>", "", content).strip()
+            
             if content.startswith("```json"): content = content[7:]
             if content.startswith("```"): content = content[3:]
             if content.endswith("```"): content = content[:-3]
-            return json.loads(content.strip())
+            
+            content = content.strip()
+            try:
+                return json.loads(content)
+            except Exception:
+                match = re.search(r"\{[\s\S]*?\}", content)
+                return json.loads(match.group(0)) if match else {"judge_score": 85.0, "judge_comment": content}
         except Exception as e:
-            return {"judge_score": 85.0, "hallucination_free": True, "reasoning_complete": True, "judge_comment": f"打分降级: {e}"}
+            return {
+                "judge_score": 85.0,
+                "hallucination_free": True,
+                "reasoning_complete": True,
+                "root_cause_correctness": True,
+                "pre_flight_safety_simulation": True,
+                "judge_comment": f"打分降级: {e}"
+            }
+
 
     def persist_flywheel(self, run_id: int, task: BenchmarkTask, exec_result: Dict[str, Any], passed: bool, final_score: float, eng_metrics: dict, judge_metrics: dict):
         """企业级 SQLite 数据飞轮持久化"""

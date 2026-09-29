@@ -56,7 +56,7 @@ def get_llm_config():
     return {
         "api_key": os.getenv("OPENAI_API_KEY", "").strip(),
         "base_url": os.getenv("OPENAI_BASE_URL", "https://api.deepseek.com/v1"),
-        "model": os.getenv("LLM_MODEL", "deepseek-chat"),
+        "model": os.getenv("LLM_MODEL", "Qwen/QwQ-32B"),
         "max_tokens": 8192,
         "cwd": Path(os.getenv("JINSHU_WORKDIR", "."))
     }
@@ -154,7 +154,8 @@ class JinShuToolAdapter(BaseTool):
 
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
         """
-        调用金枢工具函数。
+        调用金枢工具函数，附带自适应上下文压缩 (Context Compaction)。
+        当工具产生数万字符的大型监控遥测或日志转储时，自动修剪冗余，防止上下文窗口溢出。
         """
         kwargs = arguments.model_dump(exclude_none=True)
         try:
@@ -163,10 +164,23 @@ class JinShuToolAdapter(BaseTool):
                 result = await fn(**kwargs)
             else:
                 result = await asyncio.get_event_loop().run_in_executor(None, lambda: fn(**kwargs))
-            return ToolResult(output=str(result))
+            
+            res_str = str(result)
+            # 动态上下文压缩保护：阈值 3500 字符
+            if len(res_str) > 3500:
+                head = res_str[:1800]
+                tail = res_str[-1200:]
+                omitted_len = len(res_str) - 3000
+                res_str = (
+                    f"{head}\n\n"
+                    f"⚠️ ... [金枢 Phase 1 上下文动态压缩：已自动折叠中间 {omitted_len} 字符非关键冗余日志，保留首尾关键异常特征] ...\n\n"
+                    f"{tail}"
+                )
+            return ToolResult(output=res_str)
         except Exception as e:
             logger.error(f"[JinShuToolAdapter] {self.name} 执行失败: {e}")
             return ToolResult(output=f"❌ 工具 '{self.name}' 执行异常：{str(e)}", is_error=True)
+
 
 
 # ─────────────────────────────────────────────────────────────────
@@ -311,12 +325,22 @@ async def run_oh_worker(
                 }
 
             elif isinstance(event, AssistantTurnComplete):
-                # 提取最终文本回复
+                # 提取最终文本回复与隐式思维链
                 turn_text = ""
                 for block in event.message.content:
                     if hasattr(block, "text"):
                         turn_text += block.text
                 final_text += turn_text
+                
+                # 若底层推理模型输出了思维链内容，单独发射结构化 reasoning 事件
+                raw_reasoning = getattr(event.message, "_reasoning", None)
+                if raw_reasoning:
+                    yield {
+                        "event": "reasoning_chain",
+                        "expert": agent_id,
+                        "thought": raw_reasoning,
+                    }
+
                 yield {
                     "event": "final_chunk",
                     "expert": agent_id,
