@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "jinshu_harness"
+version = "2.0.0"
+description = "Enterprise-grade Multi-Agent Evaluation Harness for Jin-Shu OS"
+authors = [
+  { name = "Han Li", email = "hanli@example.com" }
+]
+readme = "harness/AGENTS.md"
+requires-python = ">=3.9"
+dependencies = [
+    "httpx>=0.24.0",
+    "pydantic>=2.0.0",
+    "python-dotenv>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "black>=23.0",
+    "isort>=5.0",
+    "flake8>=6.0",
+]
+
+[tool.setuptools]
+packages = ["harness", "engine"]
+
+[tool.black]
+line-length = 120
+target-version = ['py39']
+
+[tool.isort]
+profile = "black"
+line_length = 120

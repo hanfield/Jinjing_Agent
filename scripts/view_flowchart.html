@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>金枢系统全景流程图</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script>
+        mermaid.initialize({ 
+            startOnLoad: true, 
+            theme: 'default',
+            securityLevel: 'loose',
+            flowchart: { useMaxWidth: false, htmlLabels: true }
+        });
+    </script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f8f9fa;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            background-color: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            max-width: 1200px;
+            width: 100%;
+        }
+        h2 { text-align: center; color: #1e293b; margin-bottom: 30px; }
+        .hint { text-align: center; color: #64748b; margin-top: 20px; font-size: 14px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>🧠 金枢 (Jin-Shu) 智能运维系统：全景架构与工作流</h2>
+    <div class="mermaid">
+graph TD
+    subgraph Layer1 [🌐 宏观数据与专家知识底座]
+        direction LR
+        SOP[《企业内部SOP》<br>施耐德等原厂手册] -->|向量化 & 元数据提权| KBS[(📖 私域专家知识库)]
+        Historical[沉睡的历史工单] -->|微调膨胀提取| KBS
+        
+        Sensor[底层物理设施<br>制冷 HVAC / 供电 UPS] -->|多协议网关| Metrics[(📶 统一全量指标库)]
+        IT[虚拟化与业务层<br>服务器 / 交换网络] -->|API 抽取| Metrics
+    end
+
+    subgraph Layer2 [⚡️ 异构数据转化与预警感知]
+        direction LR
+        Metrics -->|多维交叉比对| Envelope[📈 个体高逼真数字病理比对<br>精准设备靶向匹配]
+        Envelope -->|独立靶点提取前置窗口| Alert((🚨 推送业务预警/告警))
+        User1((一线运维人员)) -->|自然语言求助| Alert
+    end
+    
+    subgraph Layer3 [🧠 金枢大模型推演中枢]
+        direction TB
+        Agent[金枢多模态 Agent <br>基于 LoRA 专家微调]
+        
+        Agent -->|1. Reason 逻辑思辨| ReAct{判断当下的<br>最优探针策略}
+        ReAct -->|2. 缺 SOP 指引| RAG_Plugin[🔍 语义检索探针]
+        ReAct -->|3. 缺 体征| Metrics_Plugin[📊 基线查询探针]
+        
+        RAG_Plugin -.->|提取权威准则| KBS
+        Metrics_Plugin -.->|下钻到底层| Metrics
+    end
+
+    subgraph Layer4 [🛡️ 零信任安全输出与进化闭环]
+        direction TB
+        ReAct -->|4. Act 排障策略| Guardrail{安全阻断网关<br>Tool Registry}
+        
+        Guardrail -- SAFE 读分析 --> Output[✅ 生成带权威引用的<br>最佳实践诊断研判报告]
+        Guardrail -- DANGER 写操作 --> Sandbox[🚫 高危拦截网闸]
+        Sandbox -->|转派人工| Approval[主管身份<br>二次授权]
+        
+        Output --> Archive[♻️ 本次优质排障经验<br>自动沉淀为数字化案例]
+    end
+
+    Layer1 -. 提供弹药 .-> Layer2
+    Alert ===> |下发任务| Agent
+    Output ===> |反馈决策| User1
+    Archive -.- |反哺填充内循环| Historical
+    
+    style Layer1 fill:#F8FAFC,stroke:#94A3B8,stroke-width:2px
+    style Layer2 fill:#FFF1F2,stroke:#FDA4AF,stroke-width:2px
+    style Layer3 fill:#F0F9FF,stroke:#38BDF8,stroke-width:2px
+    style Layer4 fill:#F0FDF4,stroke:#4ADE80,stroke-width:2px
+    
+    style Agent fill:#1E40AF,stroke:#1D4ED8,color:#fff,stroke-width:3px
+    style Guardrail fill:#9F1239,stroke:#BE123C,color:#fff
+    style KBS fill:#166534,stroke:#15803D,color:#fff
+    style Metrics fill:#B45309,stroke:#D97706,color:#fff
+    </div>
+    <div class="hint">💡 提示：你可以直接在这个网页上右键截图（或者使用浏览器自带的全网页截屏功能），插入到你的 PPT 申报材料中。</div>
+</div>
+
+</body>
+</html>

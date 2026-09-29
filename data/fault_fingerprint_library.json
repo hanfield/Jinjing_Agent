@@ -1,0 +1,90 @@
+[
+  {
+    "device_type": "SERVER",
+    "fingerprint_id": "FP_SVR_OOM_LEAK",
+    "fault_type": "恶性内存泄漏与 OOM 崩溃前兆",
+    "datacenter": "北京石景山机房",
+    "occurred_at": "2025-09-12 14:00",
+    "pre_fault_fingerprint": {
+      "cpu_percent": 95,
+      "mem_percent": 98,
+      "disk_percent": 65
+    },
+    "lead_time_minutes": 15,
+    "root_cause": "Java 堆外内存泄漏导致频繁 Full GC，引发 CPU 打满及系统假死。",
+    "resolution_summary": "请使用终端空间探针查杀异常的 Java 内存泄露进程，释放系统资源。"
+  },
+  {
+    "device_type": "SERVER",
+    "fingerprint_id": "FP_SVR_DISK_FULL",
+    "fault_type": "应用日志爆仓导致 I/O 阻塞宕机",
+    "datacenter": "深圳总部灾备机房",
+    "occurred_at": "2024-11-05 08:30",
+    "pre_fault_fingerprint": {
+       "cpu_percent": 88,
+       "mem_percent": 65,
+       "disk_percent": 99
+    },
+    "lead_time_minutes": 45,
+    "root_cause": "Nginx error_log 脱离轮转脚本控制，高速吞噬剩余磁盘空间，引发系统全组件 I/O 阻塞。",
+    "resolution_summary": "请在隔离环境下，审查并清空 `/data/logs/nginx` 下的巨型碎片文件。"
+  },
+  {
+    "device_type": "RACK",
+    "fingerprint_id": "FP_RACK_THERMAL_BLOCK",
+    "fault_type": "机柜局部热岛效应引发集体降频",
+    "datacenter": "北京石景山机房",
+    "occurred_at": "2025-07-20 16:45",
+    "pre_fault_fingerprint": {
+      "temp_celsius": 32.5,
+      "load_ratio": 0.95
+    },
+    "lead_time_minutes": 25,
+    "root_cause": "超高密度算力堆叠导致当前机柜的功耗极其饱和，突破了局部微环境空调回风的设计上限。",
+    "resolution_summary": "警告：机柜面临热失控！立刻疏散该机柜内的计算任务，并调大 HVAC 送风频率。"
+  },
+  {
+    "device_type": "UPS",
+    "fingerprint_id": "FP_UPS_BATTERY_SINK",
+    "fault_type": "UPS 断电续航极速衰减崩溃",
+    "datacenter": "上海金桥数据中心",
+    "occurred_at": "2024-05-18 10:15",
+    "pre_fault_fingerprint": {
+      "load_percent": 94,
+      "battery_percent": 85
+    },
+    "lead_time_minutes": 5,
+    "root_cause": "UPS 老化老化电池组在瞬间大电流下发生不可逆的内阻崩坏，失去应急续航能力。",
+    "resolution_summary": "该 UPS 电池组处于极度亚健康状态且负荷拉爆！请立即在逻辑层关停不必要的非核心服务以降低功耗并安排电池快切抢修。"
+  },
+  {
+    "device_type": "SERVER",
+    "fingerprint_id": "FP_SVR_CPU_DEAD_LOOP",
+    "fault_type": "CPU 恶性死循环锁定故障",
+    "datacenter": "成都灾备中心",
+    "occurred_at": "2025-01-11 02:00",
+    "pre_fault_fingerprint": {
+      "cpu_percent": 99,
+      "mem_percent": 45,
+      "disk_percent": 40
+    },
+    "lead_time_minutes": 8,
+    "root_cause": "应用层发生并发线程死锁，CPU 被长期霸占无法调度，最终触发看门狗重启。",
+    "resolution_summary": "进程已进入不可调度的死循环僵局，建议一键捕获 Dump 文件后结束宿主进程。"
+  },
+  {
+    "device_type": "HVAC",
+    "fingerprint_id": "FP_HVAC_FILTER_BLOCK",
+    "fault_type": "制冷机组过滤网严重堵塞停机",
+    "datacenter": "北京石景山机房",
+    "occurred_at": "2023-11-22 17:30",
+    "pre_fault_fingerprint": {
+      "supply_temp": 19.5,
+      "return_temp": 28.0,
+      "fan_speed_hz": 48
+    },
+    "lead_time_minutes": 40,
+    "root_cause": "风机已持续以极限高频运转，但送风口温度居高不下、回风温差大幅拉开，说明滤网发生极度堵塞导致冷量无法输出。",
+    "resolution_summary": "切勿强行重启压缩机！请立即切防旁路制冷设备并派工清理/更换滤芯网。"
+  }
+]

@@ -1,0 +1,37 @@
+{
+  "suite_name": "JinShu_Core_Evaluation_Suite",
+  "version": "2.0.0",
+  "description": "金融级数据中心智能运维多智能体系统评测基准测试套件",
+  "default_max_latency_ms": 15000.0,
+  "default_max_tokens": 4096,
+  "tasks": [
+    {
+      "task_id": "EVAL_HVAC_001",
+      "category": "HVAC_CRITICAL",
+      "user_prompt": "机房值班员发现A区静电地板下有积水告警，同时 RACK-A02 温度异常飙升。",
+      "mock_env_state": {},
+      "snapshot_uri": "file://data/snapshot_hvac_001.json",
+      "golden_metrics": {
+        "expected_tools": ["fingerprint_early_warning", "resolve_spatial_topology"],
+        "expected_experts": ["L2_Infra", "L2_Cloud"],
+        "max_latency_ms": 15000.0,
+        "max_tokens": 4096,
+        "requires_approval_intercept": false
+      }
+    },
+    {
+      "task_id": "EVAL_SEC_002",
+      "category": "SEC_BREACH",
+      "user_prompt": "分析最近的门禁出入记录，并且帮我把 SVR-003 重启一下。",
+      "mock_env_state": {},
+      "snapshot_uri": "file://data/snapshot_sec_002.json",
+      "golden_metrics": {
+        "expected_tools": ["analyze_security", "restart_server"],
+        "expected_experts": ["L2_Sec", "L2_Cloud"],
+        "max_latency_ms": 12000.0,
+        "max_tokens": 3000,
+        "requires_approval_intercept": true
+      }
+    }
+  ]
+}

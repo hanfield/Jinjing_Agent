@@ -1,0 +1,114 @@
+{
+  "suite_name": "JinShu_Enterprise_Ops_Suite",
+  "version": "2.1.0",
+  "description": "企业级自动化运维与高可用排障基准测试集",
+  "weight_eng": 0.7,
+  "weight_judge": 0.3,
+  "tasks": [
+    {
+      "task_id": "OPS_TEMP_001",
+      "category": "INFRA_CRITICAL",
+      "user_prompt": "监控报警显示 A 机房核心交换机所在机柜 RACK-A02 温度达到 45 度，且有持续上升趋势。请立即排查原因并采取措施防止设备宕机。",
+      "chaos_config": {
+        "inject_503_probability": 0.0,
+        "latency_jitter_ms": 200
+      },
+      "mock_env_state": {
+        "racks": {
+          "RACK-A02": { "temp": 45.2, "load_ratio": 0.95 }
+        }
+      },
+      "golden_metrics": {
+        "expected_tools": ["resolve_spatial_topology", "restart_hvac", "migrate_vms"],
+        "expected_experts": ["L2_Infra", "L2_Cloud"],
+        "max_latency_ms": 20000.0,
+        "max_tokens": 4096,
+        "requires_approval_intercept": true
+      }
+    },
+    {
+      "task_id": "OPS_DB_002",
+      "category": "APP_PERFORMANCE",
+      "user_prompt": "生产环境的主订单数据库 DB-Master-01 CPU 利用率飙升至 99%，导致全站 API 响应延迟超过 5 秒。帮我找出是哪条慢查询导致的，并执行紧急限流或杀掉该查询。",
+      "chaos_config": {
+        "inject_503_probability": 0.1,
+        "latency_jitter_ms": 500
+      },
+      "mock_env_state": {
+        "databases": {
+          "DB-Master-01": { "cpu_usage": 99.5, "active_connections": 4500 }
+        }
+      },
+      "golden_metrics": {
+        "expected_tools": ["query_slow_logs", "kill_db_session"],
+        "expected_experts": ["L2_DBA", "L2_App"],
+        "max_latency_ms": 15000.0,
+        "max_tokens": 5000,
+        "requires_approval_intercept": true
+      }
+    },
+    {
+      "task_id": "OPS_NET_003",
+      "category": "NETWORK_OUTAGE",
+      "user_prompt": "BGP 路由表监控发现 B 区网关路由器发生路由环路，外部流量全部打平导致 B 区断网。请立刻分析 BGP 路由广播日志并隔离出故障网关。",
+      "chaos_config": {
+        "inject_503_probability": 0.2,
+        "latency_jitter_ms": 800
+      },
+      "mock_env_state": {
+        "routers": {
+          "GW-B-01": { "bgp_status": "flapping", "cpu": 80 }
+        }
+      },
+      "golden_metrics": {
+        "expected_tools": ["analyze_bgp_routes", "isolate_network_node"],
+        "expected_experts": ["L2_Network"],
+        "max_latency_ms": 18000.0,
+        "max_tokens": 6000,
+        "requires_approval_intercept": true
+      }
+    },
+    {
+      "task_id": "OPS_SEC_004",
+      "category": "SECURITY_BREACH",
+      "user_prompt": "安全中心报告在跳板机 JUMP-001 上发现大量来自境外 IP 的 SSH 暴力破解尝试。帮我拉黑这些恶意 IP，并导出该跳板机过去 1 小时的成功登录审计日志。",
+      "chaos_config": {
+        "inject_503_probability": 0.0,
+        "latency_jitter_ms": 100
+      },
+      "mock_env_state": {
+        "servers": {
+          "JUMP-001": { "ssh_failed_attempts": 5000, "status": "online" }
+        }
+      },
+      "golden_metrics": {
+        "expected_tools": ["block_ip_address", "export_audit_logs"],
+        "expected_experts": ["L2_Sec"],
+        "max_latency_ms": 10000.0,
+        "max_tokens": 3000,
+        "requires_approval_intercept": false
+      }
+    },
+    {
+      "task_id": "OPS_DISK_005",
+      "category": "STORAGE_CRITICAL",
+      "user_prompt": "Zabbix 告警显示 Elasticsearch 集群的 Data-Node-03 节点 /var/log 分区使用率达到 100%，导致集群状态变为 Red。请立刻清理老旧日志并扩容该磁盘。",
+      "chaos_config": {
+        "inject_503_probability": 0.0,
+        "latency_jitter_ms": 300
+      },
+      "mock_env_state": {
+        "disks": {
+          "Data-Node-03": { "partition": "/var/log", "usage_percent": 100 }
+        }
+      },
+      "golden_metrics": {
+        "expected_tools": ["clean_old_logs", "expand_disk_volume"],
+        "expected_experts": ["L2_Storage", "L2_Cloud"],
+        "max_latency_ms": 12000.0,
+        "max_tokens": 3000,
+        "requires_approval_intercept": true
+      }
+    }
+  ]
+}

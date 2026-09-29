@@ -1,0 +1,705 @@
+{
+  "datacenters": [
+    {
+      "id": "DC-BJ-SJS",
+      "name": "北京石景山数据中心",
+      "city": "北京",
+      "address": "北京市石景山区",
+      "type": "核心主机房",
+      "racks": [
+        {
+          "id": "RACK-A01",
+          "zone": "A区",
+          "floor": 3,
+          "row": 1,
+          "col": 1,
+          "u_height": 42,
+          "status": "正常",
+          "power_kw": 12.5,
+          "temp_celsius": 24.2,
+          "max_capacity_kw": 20.0,
+          "devices": [
+            "SVR-001",
+            "SVR-002",
+            "SW-CORE-01"
+          ]
+        },
+        {
+          "id": "RACK-A02",
+          "zone": "A区",
+          "floor": 3,
+          "row": 1,
+          "col": 2,
+          "u_height": 42,
+          "status": "正常",
+          "power_kw": 18.9,
+          "temp_celsius": 24.0,
+          "max_capacity_kw": 20.0,
+          "devices": [
+            "SVR-003",
+            "SVR-004",
+            "SVR-005"
+          ]
+        },
+        {
+          "id": "RACK-A03",
+          "zone": "A区",
+          "floor": 3,
+          "row": 1,
+          "col": 3,
+          "u_height": 42,
+          "status": "正常",
+          "power_kw": 9.2,
+          "temp_celsius": 25.8,
+          "max_capacity_kw": 20.0,
+          "devices": [
+            "SVR-007",
+            "SVR-008"
+          ]
+        },
+        {
+          "id": "RACK-B01",
+          "zone": "B区",
+          "floor": 2,
+          "row": 2,
+          "col": 1,
+          "u_height": 42,
+          "status": "正常",
+          "power_kw": 8.2,
+          "temp_celsius": 22.8,
+          "max_capacity_kw": 15.0,
+          "devices": [
+            "FW-01",
+            "LB-01",
+            "SVR-006"
+          ]
+        },
+        {
+          "id": "RACK-B02",
+          "zone": "B区",
+          "floor": 2,
+          "row": 2,
+          "col": 2,
+          "u_height": 42,
+          "status": "正常",
+          "power_kw": 6.5,
+          "temp_celsius": 21.5,
+          "max_capacity_kw": 15.0,
+          "devices": [
+            "SW-B01",
+            "LB-02"
+          ]
+        }
+      ],
+      "ups": [
+        {
+          "id": "UPS-A-01",
+          "zone": "A区",
+          "status": "正常",
+          "load_percent": 72,
+          "battery_percent": 98,
+          "output_kva": 45.0
+        },
+        {
+          "id": "UPS-B-01",
+          "zone": "B区",
+          "status": "正常",
+          "load_percent": 45,
+          "battery_percent": 100,
+          "output_kva": 22.5
+        }
+      ],
+      "hvac": [
+        {
+          "id": "HVAC-A-01",
+          "zone": "A区",
+          "status": "运行中",
+          "supply_temp": 16.0,
+          "return_temp": 26.5,
+          "fan_speed_hz": 42
+        },
+        {
+          "id": "HVAC-B-01",
+          "zone": "B区",
+          "status": "运行中",
+          "supply_temp": 17.0,
+          "return_temp": 24.2,
+          "fan_speed_hz": 35
+        }
+      ],
+      "servers": [
+        {
+          "id": "SVR-001",
+          "hostname": "prod-db-01",
+          "os": "CentOS 7.9",
+          "cpu_percent": 45,
+          "mem_percent": 62,
+          "disk_percent": 55,
+          "status": "正常",
+          "rack_id": "RACK-A01"
+        },
+        {
+          "id": "SVR-003",
+          "hostname": "prod-app-03",
+          "os": "Ubuntu 22.04",
+          "cpu_percent": 92,
+          "mem_percent": 88,
+          "disk_percent": 70,
+          "status": "高负载告警",
+          "rack_id": "RACK-A02"
+        },
+        {
+          "id": "SVR-006",
+          "hostname": "backup-01",
+          "os": "RHEL 8",
+          "cpu_percent": 12,
+          "mem_percent": 30,
+          "disk_percent": 82,
+          "status": "正常",
+          "rack_id": "RACK-B01"
+        }
+      ],
+      "access_log": [
+        {
+          "time": "2026-04-16 09:15:22",
+          "person": "张三",
+          "type": "内部员工",
+          "zone": "A区",
+          "action": "进入"
+        },
+        {
+          "time": "2026-04-16 10:20:05",
+          "person": "李四(承包商)",
+          "type": "外部人员",
+          "zone": "A区",
+          "action": "进入"
+        },
+        {
+          "time": "2026-04-16 10:35:11",
+          "person": "王五(承包商)",
+          "type": "外部人员",
+          "zone": "A区",
+          "action": "进入"
+        }
+      ],
+      "network_traffic": [
+        {
+          "zone": "A区",
+          "timestamp": "2026-04-16 10:50:00",
+          "current_tps": 24500,
+          "tps_trend_15m": "+185%",
+          "related_racks": [
+            "RACK-A02"
+          ],
+          "predicted_cpu_surge": "+40%",
+          "predicted_temp_surge": "+4.5",
+          "status": "流量激增警告"
+        },
+        {
+          "zone": "B区",
+          "timestamp": "2026-04-16 10:50:00",
+          "current_tps": 3200,
+          "tps_trend_15m": "+5%",
+          "related_racks": [
+            "RACK-B01"
+          ],
+          "predicted_cpu_surge": "+2%",
+          "predicted_temp_surge": "+0.2",
+          "status": "正常"
+        }
+      ],
+      "history_metrics": {
+        "UPS-A-01": [
+          {
+            "time": "T-30m",
+            "load": 45
+          },
+          {
+            "time": "T-20m",
+            "load": 48
+          },
+          {
+            "time": "T-10m",
+            "load": 62
+          },
+          {
+            "time": "T-0m",
+            "load": 72
+          }
+        ],
+        "SVR-003": [
+          {
+            "time": "T-60m",
+            "cpu": 40
+          },
+          {
+            "time": "T-45m",
+            "cpu": 55
+          },
+          {
+            "time": "T-30m",
+            "cpu": 72
+          },
+          {
+            "time": "T-15m",
+            "cpu": 85
+          },
+          {
+            "time": "T-0m",
+            "cpu": 92
+          }
+        ]
+      }
+    },
+    {
+      "id": "DC-BJ-YAM",
+      "name": "北京右安门数据中心",
+      "city": "北京",
+      "address": "北京市西城区右安门",
+      "type": "同城灾备",
+      "racks": [
+        {
+          "id": "RACK-DR-01",
+          "zone": "灾备区",
+          "floor": 2,
+          "row": 1,
+          "col": 1,
+          "u_height": 42,
+          "status": "正常",
+          "power_kw": 7.8,
+          "temp_celsius": 23.1,
+          "max_capacity_kw": 15.0,
+          "devices": [
+            "SVR-DR-001",
+            "SVR-DR-002"
+          ]
+        },
+        {
+          "id": "RACK-DR-02",
+          "zone": "灾备区",
+          "floor": 2,
+          "row": 1,
+          "col": 2,
+          "u_height": 42,
+          "status": "正常",
+          "power_kw": 6.2,
+          "temp_celsius": 22.5,
+          "max_capacity_kw": 15.0,
+          "devices": [
+            "SAN-01",
+            "BACKUP-SVR-01"
+          ]
+        },
+        {
+          "id": "RACK-DR-03",
+          "zone": "灾备区",
+          "floor": 2,
+          "row": 1,
+          "col": 3,
+          "u_height": 42,
+          "status": "预警",
+          "power_kw": 11.3,
+          "temp_celsius": 28.9,
+          "max_capacity_kw": 15.0,
+          "devices": [
+            "SVR-DR-003",
+            "NAS-01"
+          ]
+        }
+      ],
+      "ups": [
+        {
+          "id": "UPS-DR-01",
+          "zone": "灾备区",
+          "status": "正常",
+          "load_percent": 52,
+          "battery_percent": 100,
+          "output_kva": 30.0
+        }
+      ],
+      "hvac": [
+        {
+          "id": "HVAC-DR-01",
+          "zone": "灾备区",
+          "status": "运行中",
+          "supply_temp": 16.5,
+          "return_temp": 25.1,
+          "fan_speed_hz": 38
+        }
+      ],
+      "servers": [
+        {
+          "id": "SVR-DR-001",
+          "hostname": "dr-db-primary",
+          "os": "CentOS 8",
+          "cpu_percent": 22,
+          "mem_percent": 45,
+          "disk_percent": 60,
+          "status": "正常",
+          "rack_id": "RACK-DR-01"
+        },
+        {
+          "id": "SVR-DR-003",
+          "hostname": "dr-app-standby",
+          "os": "Ubuntu 20.04",
+          "cpu_percent": 78,
+          "mem_percent": 82,
+          "disk_percent": 55,
+          "status": "正常",
+          "rack_id": "RACK-DR-03"
+        }
+      ],
+      "access_log": [
+        {
+          "time": "2026-04-16 08:30:00",
+          "person": "赵六",
+          "type": "内部员工",
+          "zone": "灾备区",
+          "action": "进入"
+        }
+      ],
+      "network_traffic": [
+        {
+          "zone": "灾备区",
+          "timestamp": "2026-04-16 10:50:00",
+          "current_tps": 1200,
+          "tps_trend_15m": "+3%",
+          "related_racks": [
+            "RACK-DR-01"
+          ],
+          "predicted_cpu_surge": "+1%",
+          "predicted_temp_surge": "+0.1",
+          "status": "正常"
+        }
+      ],
+      "history_metrics": {}
+    },
+    {
+      "id": "DC-SZ",
+      "name": "深圳数据中心",
+      "city": "深圳",
+      "address": "广东省深圳市南山区",
+      "type": "华南主机房",
+      "racks": [
+        {
+          "id": "RACK-SZ-A01",
+          "zone": "A机房",
+          "floor": 4,
+          "row": 1,
+          "col": 1,
+          "u_height": 42,
+          "status": "告警",
+          "power_kw": 19.2,
+          "temp_celsius": 32.8,
+          "max_capacity_kw": 20.0,
+          "devices": [
+            "SVR-SZ-001",
+            "SVR-SZ-002",
+            "SVR-SZ-003"
+          ]
+        },
+        {
+          "id": "RACK-SZ-A02",
+          "zone": "A机房",
+          "floor": 4,
+          "row": 1,
+          "col": 2,
+          "u_height": 42,
+          "status": "告警",
+          "power_kw": 17.5,
+          "temp_celsius": 30.3,
+          "max_capacity_kw": 20.0,
+          "devices": [
+            "SVR-SZ-004",
+            "SVR-SZ-005"
+          ]
+        },
+        {
+          "id": "RACK-SZ-B01",
+          "zone": "B机房",
+          "floor": 3,
+          "row": 2,
+          "col": 1,
+          "u_height": 42,
+          "status": "正常",
+          "power_kw": 11.0,
+          "temp_celsius": 26.0,
+          "max_capacity_kw": 20.0,
+          "devices": [
+            "SW-SZ-01",
+            "FW-SZ-01"
+          ]
+        },
+        {
+          "id": "RACK-SZ-B02",
+          "zone": "B机房",
+          "floor": 3,
+          "row": 2,
+          "col": 2,
+          "u_height": 42,
+          "status": "正常",
+          "power_kw": 9.8,
+          "temp_celsius": 25.5,
+          "max_capacity_kw": 20.0,
+          "devices": [
+            "SVR-SZ-006",
+            "LB-SZ-01"
+          ]
+        }
+      ],
+      "ups": [
+        {
+          "id": "UPS-SZ-A-01",
+          "zone": "A机房",
+          "status": "告警",
+          "load_percent": 86,
+          "battery_percent": 95,
+          "output_kva": 60.0
+        },
+        {
+          "id": "UPS-SZ-B-01",
+          "zone": "B机房",
+          "status": "正常",
+          "load_percent": 55,
+          "battery_percent": 100,
+          "output_kva": 40.0
+        }
+      ],
+      "hvac": [
+        {
+          "id": "HVAC-SZ-A-01",
+          "zone": "A机房",
+          "status": "故障",
+          "supply_temp": 22.0,
+          "return_temp": 35.5,
+          "fan_speed_hz": 50
+        },
+        {
+          "id": "HVAC-SZ-B-01",
+          "zone": "B机房",
+          "status": "运行中",
+          "supply_temp": 17.5,
+          "return_temp": 27.0,
+          "fan_speed_hz": 40
+        }
+      ],
+      "servers": [
+        {
+          "id": "SVR-SZ-001",
+          "hostname": "sz-prod-db-01",
+          "os": "CentOS 7.9",
+          "cpu_percent": 88,
+          "mem_percent": 91,
+          "disk_percent": 75,
+          "status": "高负载告警",
+          "rack_id": "RACK-SZ-A01"
+        },
+        {
+          "id": "SVR-SZ-002",
+          "hostname": "sz-prod-app-01",
+          "os": "Ubuntu 22.04",
+          "cpu_percent": 95,
+          "mem_percent": 87,
+          "disk_percent": 60,
+          "status": "高负载告警",
+          "rack_id": "RACK-SZ-A01"
+        }
+      ],
+      "access_log": [
+        {
+          "time": "2026-04-16 09:40:00",
+          "person": "陈工(空调厂商)",
+          "type": "外部人员",
+          "zone": "A机房",
+          "action": "进入"
+        },
+        {
+          "time": "2026-04-16 09:55:00",
+          "person": "林工(空调厂商)",
+          "type": "外部人员",
+          "zone": "A机房",
+          "action": "进入"
+        }
+      ],
+      "network_traffic": [
+        {
+          "zone": "A机房",
+          "timestamp": "2026-04-16 10:50:00",
+          "current_tps": 35000,
+          "tps_trend_15m": "+220%",
+          "related_racks": [
+            "RACK-SZ-A01",
+            "RACK-SZ-A02"
+          ],
+          "predicted_cpu_surge": "+55%",
+          "predicted_temp_surge": "+6.0",
+          "status": "流量激增警告"
+        }
+      ],
+      "history_metrics": {}
+    },
+    {
+      "id": "DC-SH",
+      "name": "上海数据中心",
+      "city": "上海",
+      "address": "上海市浦东新区张江",
+      "type": "华东主机房",
+      "racks": [
+        {
+          "id": "RACK-SH-A01",
+          "zone": "A区",
+          "floor": 5,
+          "row": 1,
+          "col": 1,
+          "u_height": 42,
+          "status": "正常",
+          "power_kw": 14.0,
+          "temp_celsius": 24.8,
+          "max_capacity_kw": 25.0,
+          "devices": [
+            "SVR-SH-001",
+            "SVR-SH-002"
+          ]
+        },
+        {
+          "id": "RACK-SH-A02",
+          "zone": "A区",
+          "floor": 5,
+          "row": 1,
+          "col": 2,
+          "u_height": 42,
+          "status": "正常",
+          "power_kw": 16.5,
+          "temp_celsius": 26.2,
+          "max_capacity_kw": 25.0,
+          "devices": [
+            "SVR-SH-003",
+            "SVR-SH-004",
+            "SVR-SH-005"
+          ]
+        },
+        {
+          "id": "RACK-SH-B01",
+          "zone": "B区",
+          "floor": 4,
+          "row": 2,
+          "col": 1,
+          "u_height": 42,
+          "status": "正常",
+          "power_kw": 10.8,
+          "temp_celsius": 23.5,
+          "max_capacity_kw": 20.0,
+          "devices": [
+            "FW-SH-01",
+            "SW-SH-01"
+          ]
+        },
+        {
+          "id": "RACK-SH-C01",
+          "zone": "C区",
+          "floor": 3,
+          "row": 3,
+          "col": 1,
+          "u_height": 42,
+          "status": "预警",
+          "power_kw": 18.0,
+          "temp_celsius": 28.5,
+          "max_capacity_kw": 20.0,
+          "devices": [
+            "GPU-SVR-01",
+            "GPU-SVR-02"
+          ]
+        }
+      ],
+      "ups": [
+        {
+          "id": "UPS-SH-A-01",
+          "zone": "A区",
+          "status": "正常",
+          "load_percent": 66,
+          "battery_percent": 99,
+          "output_kva": 80.0
+        },
+        {
+          "id": "UPS-SH-B-01",
+          "zone": "B区",
+          "status": "正常",
+          "load_percent": 40,
+          "battery_percent": 100,
+          "output_kva": 40.0
+        }
+      ],
+      "hvac": [
+        {
+          "id": "HVAC-SH-A-01",
+          "zone": "A区",
+          "status": "运行中",
+          "supply_temp": 15.5,
+          "return_temp": 25.8,
+          "fan_speed_hz": 44
+        },
+        {
+          "id": "HVAC-SH-C-01",
+          "zone": "C区",
+          "status": "运行中",
+          "supply_temp": 14.0,
+          "return_temp": 27.5,
+          "fan_speed_hz": 50
+        }
+      ],
+      "servers": [
+        {
+          "id": "SVR-SH-001",
+          "hostname": "sh-prod-db-master",
+          "os": "CentOS 8",
+          "cpu_percent": 55,
+          "mem_percent": 70,
+          "disk_percent": 45,
+          "status": "正常",
+          "rack_id": "RACK-SH-A01"
+        },
+        {
+          "id": "GPU-SVR-01",
+          "hostname": "sh-gpu-train-01",
+          "os": "Ubuntu 22.04",
+          "cpu_percent": 72,
+          "mem_percent": 85,
+          "disk_percent": 88,
+          "status": "正常",
+          "rack_id": "RACK-SH-C01"
+        }
+      ],
+      "access_log": [
+        {
+          "time": "2026-04-16 10:05:00",
+          "person": "吴工",
+          "type": "内部员工",
+          "zone": "A区",
+          "action": "进入"
+        },
+        {
+          "time": "2026-04-16 10:20:00",
+          "person": "孙工",
+          "type": "内部员工",
+          "zone": "C区",
+          "action": "进入"
+        }
+      ],
+      "network_traffic": [
+        {
+          "zone": "A区",
+          "timestamp": "2026-04-16 10:50:00",
+          "current_tps": 18000,
+          "tps_trend_15m": "+12%",
+          "related_racks": [
+            "RACK-SH-A02"
+          ],
+          "predicted_cpu_surge": "+8%",
+          "predicted_temp_surge": "+1.0",
+          "status": "正常"
+        }
+      ],
+      "history_metrics": {}
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+# Environments
+venv/
+env/
+.env
+.venv
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Pytest / Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Local history and databases
+data/solution_history.json
+finetune/train_data.jsonl
+finetune/dpo_negatives.jsonl
+*.db
+*.sqlite
+*.sqlite3
+.jwt_secret
+data/.jwt_secret
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+
+# Logs and OS
+*.log
+.DS_Store
+

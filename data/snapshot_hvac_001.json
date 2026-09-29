@@ -1,0 +1,8 @@
+{
+  "racks": {
+    "RACK-A02": { "temp": 38.5, "load_ratio": 0.92 }
+  },
+  "ups": {
+    "UPS-A-01": { "load_percent": 88, "battery_percent": 95 }
+  }
+}

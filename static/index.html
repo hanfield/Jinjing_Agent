@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>金枢智能辅助决策系统</title>
+    <!-- 引入 Markdown解析库 -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        :root {
+            --bg-base: #000000;
+            --panel-bg: rgba(28, 28, 30, 0.4);
+            --theme-blue: #0A84FF;
+            --theme-light-blue: #5E5CE6;
+            --border-color: rgba(255, 255, 255, 0.08);
+            --text-main: #F5F5F7;
+            --text-sub: #A1A1A6;
+            --alert-red: #FF453A;
+            --alert-yellow: #FF9F0A;
+            --alert-green: #32D74B;
+            
+            --left-panel-width: 360px;
+            --right-panel-width: 380px;
+            --font-main: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Helvetica Neue", sans-serif;
+            
+            --radius-large: 20px;
+            --radius-md: 14px;
+            --radius-sm: 8px;
+            --blur-fx: blur(60px) saturate(210%);
+        }
+
+        * { box-sizing: border-box; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.5); }
+
+        body {
+            margin: 0; padding: 0;
+            font-family: var(--font-main);
+            background-color: var(--bg-base);
+            /* iOS 风格的深邃环境光渐变 */
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(10, 132, 255, 0.15), transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(94, 92, 230, 0.15), transparent 25%);
+            background-attachment: fixed;
+            color: var(--text-main);
+            height: 100vh;
+            display: flex; flex-direction: column;
+            overflow: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ----- 登录拦截层 (Auth Overlay) ----- */
+        #auth-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.6); backdrop-filter: var(--blur-fx);
+            z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            transition: opacity 0.5s ease-out, visibility 0.5s;
+        }
+        .auth-box {
+            background: rgba(44, 44, 46, 0.65); padding: 40px; border-radius: var(--radius-large);
+            border: 1px solid var(--border-color);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+            width: 380px; text-align: center;
+            backdrop-filter: var(--blur-fx);
+        }
+        .auth-logo { font-size: 26px; color: #fff; font-weight: 600; margin-bottom: 30px; letter-spacing: 1px; }
+        .auth-logo span { color: var(--theme-blue); }
+        
+        .auth-input { 
+            width: 100%; background: rgba(0, 0, 0, 0.3); border: 1px solid transparent; 
+            color: #fff; padding: 14px 16px; margin-bottom: 16px; 
+            font-family: var(--font-main); font-size: 15px; outline: none; border-radius: var(--radius-md);
+            transition: all 0.3s;
+        }
+        .auth-input:focus { background: rgba(255, 255, 255, 0.05); border-color: rgba(10, 132, 255, 0.5); }
+        
+        .auth-btn { 
+            width: 100%; background: var(--theme-blue); border: none; 
+            color: #fff; font-family: var(--font-main); font-size: 16px; font-weight: 600; 
+            padding: 14px; cursor: pointer; transition: all 0.3s; border-radius: var(--radius-md);
+            margin-top: 10px; box-shadow: 0 4px 14px rgba(10,132,255,0.3);
+        }
+        .auth-btn:hover { filter: brightness(1.1); transform: scale(0.98); }
+        
+        .auth-mode-toggle { margin-top: 20px; font-size: 13px; color: var(--text-sub); cursor: pointer; transition: 0.2s;}
+        .auth-mode-toggle:hover { color: #fff; }
+        #auth-error { color: var(--alert-red); font-size: 13px; margin-top: 15px; min-height: 18px;}
+
+        /* ----- 头部控制面板 ----- */
+        header {
+            height: 64px; background: rgba(0, 0, 0, 0.3); backdrop-filter: var(--blur-fx);
+            border-bottom: 0.5px solid var(--border-color);
+            display: flex; align-items: center; justify-content: space-between; padding: 0 30px;
+            flex-shrink: 0; z-index: 10;
+        }
+        .logo { font-size: 20px; color: #fff; font-weight: 600; letter-spacing: 0.5px; display: flex; align-items: baseline; gap: 12px;}
+        .logo span { font-size: 13px; color: var(--text-sub); font-weight: 500; padding-left: 12px; border-left: 1px solid rgba(255,255,255,0.1); }
+        
+        .operator-info { display: flex; align-items: center; gap: 20px; font-size: 14px; color: var(--text-sub); font-weight: 500; }
+        .op-status { display: flex; align-items: center; gap: 8px; }
+        .op-status::before { content: ''; width: 8px; height: 8px; background: var(--alert-green); border-radius: 50%; box-shadow: 0 0 8px var(--alert-green);}
+        
+        .operator-name { color: #fff; }
+        .logout-btn { 
+            background: rgba(255,255,255,0.1); border: none; color: #fff; font-weight: 500;
+            padding: 6px 14px; cursor: pointer; border-radius: 20px; transition: all 0.2s;
+        }
+        .logout-btn:hover { background: rgba(255,255,255,0.2); }
+
+        /* ----- 主体三栏布局 ----- */
+        .container { display: flex; flex: 1; overflow: hidden; padding: 20px; gap: 0; }
+        .resizer { width: 24px; display: flex; align-items: center; justify-content: center; cursor: col-resize; flex-shrink: 0; z-index: 5; transition: all 0.2s;}
+        .resizer::after { content: ""; width: 4px; height: 30px; background-color: rgba(255,255,255,0.1); border-radius: 4px; transition: all 0.3s; }
+        .resizer:hover::after, body.is-resizing .resizer::after { background-color: var(--theme-blue); height: 60px; box-shadow: 0 0 10px rgba(10,132,255,0.6); }
+        body.is-resizing { user-select: none; }
+        body.is-resizing * { cursor: col-resize !important; }
+
+        .panel {
+            background: var(--panel-bg); 
+            backdrop-filter: var(--blur-fx);
+            -webkit-backdrop-filter: var(--blur-fx);
+            border: 0.5px solid var(--border-color); border-radius: var(--radius-large);
+            display: flex; flex-direction: column; overflow: hidden;
+            box-shadow: 0 14px 45px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.05);
+            position: relative;
+            transform: translate3d(0, 0, 0);
+        }
+        .panel-header {
+            padding: 16px 24px; border-bottom: 0.5px solid rgba(255,255,255,0.08);
+            font-size: 15px; color: rgba(255,255,255,0.9); font-weight: 600;
+            display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;
+        }
+
+        /* 左侧告警流 */
+        .alerts-panel { width: var(--left-panel-width); flex-shrink: 0; }
+        .alerts-content { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+        .alert-card {
+            background: rgba(255, 255, 255, 0.03); padding: 18px; border-radius: var(--radius-md);
+            cursor: pointer; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            border: 0.5px solid rgba(255, 255, 255, 0.04);
+            position: relative; overflow: hidden;
+            flex-shrink: 0;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.02);
+        }
+        .alert-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;}
+        .alert-card:hover { transform: translateY(-2px); background: rgba(255, 255, 255, 0.07); box-shadow: 0 8px 24px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.05); }
+        .alert-card.danger::before { background: var(--alert-red); }
+        .alert-card.warning::before { background: var(--alert-yellow); }
+        .alert-title { font-size: 15px; font-weight: 600; color: #fff; margin-bottom: 6px; letter-spacing: 0.3px;}
+        .alert-detail { font-size: 13px; color: var(--text-sub); margin-bottom: 12px; line-height: 1.5; }
+        .alert-action { font-size: 13px; color: var(--theme-blue); font-weight: 600; }
+
+        /* 中间对话 */
+        .chat-panel { flex: 1; min-width: 300px;}
+        .chat-messages { flex: 1; overflow-y: auto; padding: 30px; display: flex; flex-direction: column; gap: 24px; min-height: 0; transform: translate3d(0,0,0); }
+        .message { display: flex; gap: 16px; max-width: 85%; }
+        .message.user { align-self: flex-end; flex-direction: row-reverse; }
+        .avatar { width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; flex-shrink: 0; border-radius: 50%; color: #fff;}
+        .user .avatar { background: linear-gradient(135deg, #4b5563, #1e293b); }
+        .agent .avatar { background: linear-gradient(135deg, var(--theme-blue), var(--theme-light-blue)); box-shadow: 0 4px 10px rgba(10,132,255,0.3);}
+        
+        /* AI 消息气泡稳定性增强 */
+        .agent .message-content {
+            background: rgba(255,255,255,0.06);
+            padding: 18px 22px;
+            border-radius: 20px;
+            font-size: 15px;
+            line-height: 1.7;
+            position: relative;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            backdrop-filter: var(--blur-fx);
+            color: #fff;
+            border: 0.5px solid rgba(255,255,255,0.08);
+            min-width: 60%; /* 确保在思考时气泡也足够饱满 */
+            width: fit-content;
+            max-width: 85%;
+        }
+
+        .user .message-content {
+            background: var(--theme-blue);
+            padding: 18px 22px;
+            border-radius: 20px 2px 20px 20px;
+            color: #fff;
+            box-shadow: 0 4px 15px rgba(10,132,255,0.2);
+            width: fit-content;
+            max-width: 80%;
+            margin-left: auto;
+        }
+        .user .message-content { background: var(--theme-blue); border-color: transparent; border-radius: 20px 2px 20px 20px; color: #fff;}
+        
+        /* Markdown 样式覆盖 */
+        .message-content h1, .message-content h2, .message-content h3 { color: #fff; font-size: 16px; margin-top: 16px; margin-bottom: 10px; font-weight: 600;}
+        .message-content pre { background: rgba(0,0,0,0.4); padding: 14px; border: 0.5px solid rgba(255,255,255,0.1); border-radius: var(--radius-sm); color: #e2e8f0; font-family: 'SF Mono', monospace; font-size: 13px; overflow-x: auto; margin: 12px 0;}
+        .message-content code { color: #82aaff; background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px; font-family: 'SF Mono', monospace; font-size: 13px;}
+        .user .message-content code { background: rgba(255,255,255,0.2); color: #fff;}
+        .message-content ul, .message-content ol { padding-left: 20px; margin: 10px 0; }
+        .message-content li { margin-bottom: 8px; }
+
+        .chat-input-area { padding: 20px 24px; border-top: 0.5px solid rgba(255,255,255,0.08); flex-shrink: 0;}
+        .input-box { display: flex; gap: 15px; background: rgba(0,0,0,0.3); padding: 8px; border-radius: var(--radius-large); border: 0.5px solid rgba(255,255,255,0.1); backdrop-filter: var(--blur-fx);}
+        .input-box textarea { flex: 1; background: transparent; border: none; color: #fff; font-family: var(--font-main); font-size: 15px; padding: 12px 16px; resize: none; height: 46px; outline: none; }
+        .input-box textarea::placeholder { color: var(--text-sub); }
+        .send-btn { background: var(--theme-blue); color: #fff; border: none; border-radius: 20px; padding: 0 24px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.2s;}
+        .send-btn:hover:not(:disabled) { background: #007AFF; transform: scale(0.98);}
+        .send-btn:disabled { background: rgba(255,255,255,0.1); color: var(--text-sub); cursor: not-allowed; transform: none;}
+
+        /* 右侧历史库 */
+        .history-panel { width: var(--right-panel-width); flex-shrink: 0; }
+        .history-content { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; min-height: 0; transform: translate3d(0,0,0); }
+        .history-record { background: rgba(255,255,255,0.04); border: 0.5px solid rgba(255,255,255,0.08); padding: 18px; border-radius: var(--radius-md); transition: all 0.2s; }
+        .history-record:hover { background: rgba(255,255,255,0.08); }
+        .record-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; border-bottom: 0.5px solid rgba(255,255,255,0.08); padding-bottom: 12px; }
+        .record-time { font-size: 12px; color: var(--text-sub); font-weight: 500;}
+        .record-op { font-size: 12px; background: rgba(10,132,255,0.15); color: #0A84FF; padding: 4px 10px; border-radius: 12px; font-weight: 600; }
+        .record-trigger { font-size: 14px; color: #fff; font-weight: 600; margin-bottom: 10px; letter-spacing: 0.3px;}
+        .record-body { font-size: 13px; color: rgba(255,255,255,0.8); line-height: 1.6; max-height: 250px; overflow-y: auto; padding-right: 5px; }
+    </style>
+</head>
+<body>
+
+    <!-- 登录注册拦截层 -->
+    <div id="auth-overlay">
+        <div class="auth-box">
+            <div class="auth-logo">金枢<span>管控平台</span></div>
+            <input type="text" id="auth-username" class="auth-input" placeholder="员工工号 (Employee ID)" autocomplete="off">
+            <input type="password" id="auth-password" class="auth-input" placeholder="系统密码 (Password)">
+            <div style="display: none;" id="register-fields">
+                <input type="text" id="auth-display" class="auth-input" placeholder="真实姓名 (Full Name)" autocomplete="off">
+            </div>
+            <button id="auth-submit-btn" class="auth-btn">系统登录</button>
+            <div id="auth-error"></div>
+            <div class="auth-mode-toggle" id="auth-toggle-btn">暂无权限？申请开通操作员账号</div>
+        </div>
+    </div>
+    <script>
+        // 瞬时拦截闪烁：如果本地有 Token，先行隐藏遮罩层
+        if (localStorage.getItem('jinshu_token')) {
+            document.getElementById('auth-overlay').style.display = 'none';
+        }
+    </script>
+
+    <!-- 顶部导航 -->
+    <header>
+        <div class="logo">金枢 <span>数据中心智能辅助决策中枢</span></div>
+        <div class="operator-info">
+            <div class="op-status">安全隔离防线已开启</div>
+            <span style="color:#475569;">|</span>
+            <div>操作员: <span class="operator-name" id="current-op-name">未知</span></div>
+            <button class="logout-btn" onclick="logout()">安全退出</button>
+        </div>
+    </header>
+
+    <!-- 主体 -->
+    <div class="container">
+        <!-- 左侧告警流 -->
+        <aside class="panel alerts-panel" id="left-panel">
+            <div class="panel-header">
+                <span>全维度体征感知看板</span>
+                <span id="alert-refresh-time" style="font-size:12px; color:var(--text-sub);">更新时间: --:--</span>
+            </div>
+            <div class="alerts-content" id="alerts-container"></div>
+        </aside>
+
+        <div class="resizer" id="resizer-left"></div>
+
+        <!-- 中间对话 -->
+        <main class="panel chat-panel" id="middle-panel">
+            <div class="panel-header">
+                <span>交互式辅助决策核心 (专家外脑)</span>
+                <button onclick="startNewChat()" style="background: rgba(28,28,32,0.6); backdrop-filter: blur(10px); border: 0.5px solid rgba(255,255,255,0.15); color: #e2e8f0; padding: 6px 14px; border-radius: 20px; font-size: 13px; cursor: pointer; transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1); font-weight: 500; display:flex; align-items:center; gap:6px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);" onmouseover="this.style.background='rgba(40,40,45,0.8)'; this.style.color='#fff'; this.style.borderColor='rgba(255,255,255,0.3)'; this.style.transform='translateY(-1px)'" onmouseout="this.style.background='rgba(28,28,32,0.6)'; this.style.color='#e2e8f0'; this.style.borderColor='rgba(255,255,255,0.15)'; this.style.transform='translateY(0)'">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                    开启新对话
+                </button>
+            </div>
+            <div class="chat-messages" id="chat-messages">
+                <div class="message agent">
+                    <div class="avatar">AI</div>
+                    <div class="message-content">
+                        <b>系统已就绪。</b><br><br>
+                        人机物理隔离屏障已严格设防，大模型多变量时序联合分析网络已启动。<br>
+                        您只需下达指令或点击异常告警靶点，金枢将自动启动“递进式诊断流水线”，为您提供精准的预测性主动节能建议与故障步进式排查 SOP。系统承诺仅作为“专家外脑”，不下发强制控制指令。
+                    </div>
+                </div>
+            </div>
+            <div class="chat-input-area">
+                <div class="input-box" id="input-container">
+                    <textarea id="user-input" placeholder="输入告警特征或设备编号，或直接点击左侧态势卡片..."></textarea>
+                    <button id="send-btn" class="send-btn">生成方案</button>
+                </div>
+            </div>
+        </main>
+
+        <div class="resizer" id="resizer-right"></div>
+
+        <!-- 右侧历史 -->
+        <aside class="panel history-panel" id="right-panel">
+            <div class="panel-header">
+                <span>排障经验数字沉淀池</span>
+                <span id="history-count" style="font-size:12px; background:rgba(255,255,255,0.1); padding:2px 8px; border-radius: 10px;">0 条归档</span>
+            </div>
+            <div class="history-content" id="history-container"></div>
+        </aside>
+    </div>
+
+
+    <!-- JS 逻辑完全复用 -->
+    <script>
+        const authOverlay = document.getElementById('auth-overlay');
+        const authToggleBtn = document.getElementById('auth-toggle-btn');
+        const authSubmitBtn = document.getElementById('auth-submit-btn');
+        const regFields = document.getElementById('register-fields');
+        const authError = document.getElementById('auth-error');
+        
+        const chatMessages = document.getElementById('chat-messages');
+        const userInput = document.getElementById('user-input');
+        const sendBtn = document.getElementById('send-btn');
+        const alertsContainer = document.getElementById('alerts-container');
+        const historyContainer = document.getElementById('history-container');
+        
+        let currentAlertContext = "用户主动咨询";
+        let isLoginMode = true;
+        let token = localStorage.getItem('jinshu_token');
+        
+        const generateSessionId = () => Math.random().toString(36).substring(2, 10);
+        let currentChatSessionId = null; // 初始化为空，以便触发自动恢复逻辑
+
+        authToggleBtn.onclick = () => {
+            isLoginMode = !isLoginMode;
+            if (isLoginMode) {
+                regFields.style.display = 'none';
+                authSubmitBtn.innerHTML = '系统登录';
+                authToggleBtn.innerHTML = '暂无权限？申请开通操作员账号';
+            } else {
+                regFields.style.display = 'block';
+                authSubmitBtn.innerHTML = '提交开通申请';
+                authToggleBtn.innerHTML = '取消申请，返回登录';
+            }
+            authError.textContent = '';
+        };
+
+        async function handleAuth() {
+            const username = document.getElementById('auth-username').value.trim();
+            const password = document.getElementById('auth-password').value.trim();
+            const display = document.getElementById('auth-display').value.trim();
+            
+            if(!username || !password) { authError.textContent = "请完整填写身份信息"; return; }
+
+            const endpoint = isLoginMode ? '/api/login' : '/api/register';
+            const payload = isLoginMode ? {username, password} : {username, password, display_name: display};
+
+            try {
+                authSubmitBtn.disabled = true;
+                const res = await fetch(endpoint, {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                
+                if (res.ok && data.success) {
+                    token = data.token;
+                    localStorage.setItem('jinshu_token', token);
+                    document.getElementById('current-op-name').textContent = data.user.display_name;
+                    unlockSystem();
+                } else {
+                    authError.textContent = "认证失败: " + (data.detail || "访问被拒绝");
+                }
+            } catch (e) {
+                authError.textContent = "网络通讯异常，请联系系统管理员";
+            } finally {
+                authSubmitBtn.disabled = false;
+            }
+        }
+
+        authSubmitBtn.onclick = handleAuth;
+        document.getElementById('auth-password').onkeydown = (e) => { if (e.key === 'Enter') handleAuth(); };
+
+        function unlockSystem() {
+            authOverlay.style.opacity = '0';
+            setTimeout(() => { authOverlay.style.visibility = 'hidden'; }, 500);
+            initSystem();
+        }
+
+        function logout() {
+            localStorage.removeItem('jinshu_token');
+            localStorage.removeItem('jinshu_active_session'); // 退出时清理
+            location.reload();
+        }
+
+        async function verifySession() {
+            if (!token) return; 
+            try {
+                const res = await fetch('/api/me', { headers: { 'Authorization': `Bearer ${token}` } });
+                if (res.ok) {
+                    const data = await res.json();
+                    document.getElementById('current-op-name').textContent = data.display_name;
+                    unlockSystem();
+                } else {
+                    localStorage.removeItem('jinshu_token');
+                    token = null;
+                }
+            } catch (e) {
+                authError.textContent = "会话验证失败，请重新登录";
+            }
+        }
+
+        function initSystem() {
+            fetchAlerts();
+            fetchHistory();
+            setInterval(fetchAlerts, 10000);
+        }
+
+        function buildHeaders() {
+            return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
+        }
+
+        const [resizerLeft, resizerRight] = [document.getElementById('resizer-left'), document.getElementById('resizer-right')];
+        let [isResizingLeft, isResizingRight] = [false, false];
+        resizerLeft.onmousedown = () => { isResizingLeft = true; document.body.classList.add('is-resizing'); };
+        resizerRight.onmousedown = () => { isResizingRight = true; document.body.classList.add('is-resizing'); };
+        document.onmousemove = (e) => {
+            if (isResizingLeft) document.documentElement.style.setProperty('--left-panel-width', `${Math.max(250, Math.min(e.clientX - 20, 600))}px`);
+            if (isResizingRight) document.documentElement.style.setProperty('--right-panel-width', `${Math.max(250, Math.min(document.documentElement.clientWidth - e.clientX - 20, 800))}px`);
+        };
+        document.onmouseup = () => { isResizingLeft = false; isResizingRight = false; document.body.classList.remove('is-resizing'); };
+
+        userInput.oninput = function() { this.style.height = '46px'; this.style.height = (this.scrollHeight) + 'px'; };
+        userInput.onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } };
+        sendBtn.onclick = handleSend;
+
+        function addMessage(text, isUser=false, trace=null) {
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `message ${isUser ? 'user' : 'agent'}`;
+            
+            // 处理 AI 为空的情况（例如纯工具调用）
+            let contentToShow = text;
+            if (!isUser && !text && (!trace || trace.length === 0)) {
+                contentToShow = '<i style="color:var(--text-sub); opacity:0.6;">(系统尚未输出结论)</i>';
+            } else if (!isUser && !text) {
+                contentToShow = '<i style="color:var(--theme-blue); opacity:0.8; font-size:13px;">✔ 已完成推理流程，见推演链路回溯。</i>';
+            }
+
+            msgDiv.innerHTML = `<div class="avatar">${isUser ? 'OP' : 'AI'}</div>
+                                <div class="message-content">
+                                    ${!isUser ? `
+                                    <div class="trace-wrapper" style="${trace ? 'display:block' : 'display:none'}; margin-bottom: 16px; border-radius: 12px; overflow: hidden; background: rgba(0,0,0,0.2); border: 0.5px solid rgba(255,255,255,0.1); backdrop-filter: var(--blur-fx);">
+                                        <div class="trace-header" onclick="const c = this.nextElementSibling; c.style.display = c.style.display === 'none' ? 'block' : 'none';" style="padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; background: rgba(255,255,255,0.03); font-size: 13px; color: #94a3b8; transition: all 0.2s;">
+                                            <span style="display:flex; align-items:center; gap:6px; font-weight:600;"><i style="font-style:normal; color:#0A84FF;">⚡</i> 系统推演链路</span>
+                                            <span style="font-size: 11px; opacity:0.6;">查看 / 隐藏详情</span>
+                                        </div>
+                                        <div class="trace-container" style="padding: 12px 14px; font-family: 'SF Mono', monospace; font-size: 13px; max-height: 400px; overflow-y: auto; ${trace ? 'display:none' : ''}"></div>
+                                    </div>` : ''}
+                                    <div class="main-content">${isUser ? contentToShow.replace(/\n/g, '<br>') : marked.parse(contentToShow)}</div>
+                                </div>`;
+            
+            chatMessages.appendChild(msgDiv);
+            
+            // 如果传入了现有 trace，进行还原
+            if (trace && !isUser) {
+                const container = msgDiv.querySelector('.trace-container');
+                trace.forEach(ev => {
+                    if (ev.event === "thought") {
+                        container.innerHTML += `<div style="color: #94a3b8; margin-bottom: 8px;">🧠 ${ev.text}</div>`;
+                    } else if (ev.event === "tool_call") {
+                        container.innerHTML += `<div style="color: #38bdf8; margin-bottom: 8px;">📡 执行探针: <span style="color:#7dd3fc">${ev.name}</span></div>`;
+                    } else if (ev.event === "observation") {
+                        container.innerHTML += `<div style="color: #22c55e; margin-bottom: 12px; padding-left: 12px; border-left: 2px solid #166534;">✓ 数据回流: ${ev.result}</div>`;
+                    } else if (ev.event === "approval_required") {
+                        container.innerHTML += `<div style="color: #fbbf24; margin-bottom: 8px;">⚠️ 触发高危拦截: 需人工授权 <span style="background:rgba(251,191,36,0.1); padding:2px 6px; border-radius:4px;">${ev.tool}</span></div>`;
+                    }
+                });
+            }
+
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            return msgDiv;
+        }
+
+        async function startNewChat() {
+            try {
+                const response = await fetch('/api/chat/clear', {
+                    method: 'POST',
+                    headers: buildHeaders()
+                });
+                if (response.ok) {
+                    currentChatSessionId = generateSessionId();
+                    localStorage.setItem('jinshu_active_session', currentChatSessionId); // 记录新对局 ID
+                    chatMessages.innerHTML = `
+                        <div class="message agent">
+                            <div class="avatar">AI</div>
+                            <div class="message-content">
+                                <b>系统已就绪（新对局已开启）。</b><br><br>
+                                前面的排障记录已封存进经验池。<br>
+                                您现在可以发起针对新事故的指令。
+                            </div>
+                        </div>`;
+                    sendBtn.disabled = false;
+                    userInput.placeholder = "输入告警特征或设备编号...";
+                } else if(response.status === 401) {
+                    logout();
+                }
+            } catch (e) {
+                console.error("Failed to clear chat", e);
+            }
+        }
+
+        async function handleSend() {
+            const text = userInput.value.trim();
+            if (!text) return;
+            
+            // 如果目前没有 Session ID（既没自动恢复也没手动开启过），现在立刻生成一个
+            if (!currentChatSessionId) {
+                currentChatSessionId = generateSessionId();
+                localStorage.setItem('jinshu_active_session', currentChatSessionId);
+            }
+            
+            const msgDiv = addMessage(text, true);
+            userInput.value = '';
+            userInput.style.height = '46px';
+            sendBtn.disabled = true;
+            
+            const agentMsgDiv = addMessage('', false);
+            const contentDiv = agentMsgDiv.querySelector('.main-content');
+            const traceContainer = agentMsgDiv.querySelector('.trace-container');
+            const traceWrapper = agentMsgDiv.querySelector('.trace-wrapper');
+            traceWrapper.style.display = 'block'; // 发送时必定显示过程
+            
+            let accumulatedText = "";
+            agentMsgDiv.dataset.accumulated = "";
+
+            try {
+                const response = await fetch('/api/chat/stream', {
+                    method: 'POST', headers: buildHeaders(),
+                    body: JSON.stringify({ 
+                        message: text, 
+                        trigger: currentAlertContext,
+                        chat_session_id: currentChatSessionId
+                    })
+                });
+                if(!response.ok) {
+                    if (response.status === 401) logout();
+                    throw new Error('API ERROR');
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+
+                while(true) {
+                    const {done, value} = await reader.read();
+                    if(done) break;
+                    buffer += decoder.decode(value, {stream: true});
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop(); 
+                    for(const line of lines) {
+                        if(!line.trim()) continue;
+                        try {
+                            const data = JSON.parse(line);
+                            if (data.event === "error") {
+                                accumulatedText += `\n\n<span style="color:var(--alert-red)">系统处理异常: ${data.error}</span>`;
+                            } else if (data.event === "experience_recall") {
+                                traceWrapper.style.display = "block";
+                                if (data.status === "searching") {
+                                    traceContainer.innerHTML += `<div id="recall-status" style="color: #94a3b8; margin-bottom:12px; display:flex; align-items:center; gap:8px; padding: 6px 12px; border-radius:6px; background: rgba(255,255,255,0.03); border: 0.5px solid rgba(255,255,255,0.08);">
+                                        <div class="recall-spinner" style="width:12px; height:12px; border:2px solid rgba(255,255,255,0.1); border-top:2px solid #0A84FF; border-radius:50%; animation: spin 0.8s linear infinite;"></div>
+                                        <span>🧠 正在从控制中心“数字倒影库”检索相似对局经验...</span>
+                                    </div>`;
+                                } else if (data.status === "matched") {
+                                    const recallEl = document.getElementById('recall-status');
+                                    if (recallEl) {
+                                        recallEl.innerHTML = `<span style="color:#0A84FF; font-weight:600;">🧠 知识对撞成功：已召回历史相似案例专家经验</span>`;
+                                        recallEl.style.background = "rgba(10,132,255,0.1)";
+                                        recallEl.style.border = "0.5px solid rgba(10,132,255,0.3)";
+                                    }
+                                } else if (data.status === "missed") {
+                                    const recallEl = document.getElementById('recall-status');
+                                    if (recallEl) {
+                                        recallEl.innerHTML = `<span style="color:#64748b;">🧠 检索完毕：未发现高度相关的历史沉淀记录</span>`;
+                                        recallEl.style.background = "rgba(255,255,255,0.02)";
+                                    }
+                                }
+                            } else if (data.event === "start_thinking") {
+                                traceWrapper.style.display = "block";
+                                traceContainer.innerHTML += `<div style="color: var(--text-sub); margin-bottom:4px;">🧠 开启态势推演网络...</div>`;
+                            } else if (data.event === "thought") {
+                                const tDiv = document.createElement('div');
+                                tDiv.style.cssText = "color: #94a3b8; margin-bottom:4px; padding-left:14px; border-left:1px dashed #475569;";
+                                traceContainer.appendChild(tDiv);
+                                tDiv.innerHTML = `💭 `;
+                                for (let i = 0; i < data.text.length; i++) {
+                                    tDiv.innerHTML += data.text.charAt(i);
+                                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                                    await new Promise(r => setTimeout(r, 6)); // 打字机延迟
+                                }
+                            } else if (data.event === "tool_call") {
+                                if (data.name === "visualize_topology") {
+                                    const racks = ["RACK-A01", "RACK-A02", "UPS-A-01", "RACK-B01", "FW-01", "HVAC-A-01"];
+                                    const dangerRacks = data.args.danger_racks || [];
+                                    let rackHtml = '';
+                                    racks.forEach(r => {
+                                        const isDanger = dangerRacks.includes(r);
+                                        rackHtml += `<div style="padding: 10px; margin: 4px; border-radius: 6px; text-align: center; border: 1px solid ${isDanger ? 'rgba(255,69,58,0.8)' : 'rgba(255,255,255,0.1)'}; background: ${isDanger ? 'rgba(255,69,58,0.15)' : 'rgba(255,255,255,0.05)'}; ${isDanger ? 'box-shadow: 0 0 15px rgba(255,69,58,0.4); animation: pulse 2s infinite;' : ''}">
+                                            <div style="font-size:13px; font-weight:600; color:${isDanger?'#ff8080':'#ccc'}; font-family: monospace;">${r}</div>
+                                            <div style="font-size:10px; margin-top:4px; color:${isDanger?'var(--alert-red)':'#666'}">${isDanger?'HIGH RISK':'NORMAL'}</div>
+                                        </div>`;
+                                    });
+                                    if(!document.getElementById('pulse-css')) {
+                                        document.head.insertAdjacentHTML('beforeend', '<style id="pulse-css">@keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255,69,58,0.4); } 70% { box-shadow: 0 0 0 10px rgba(255,69,58,0); } 100% { box-shadow: 0 0 0 0 rgba(255,69,58,0); } }</style>');
+                                    }
+                                    
+                                    contentDiv.innerHTML += `
+                                    <div style="margin: 16px 0; padding: 16px; background: rgba(0,0,0,0.3); border-radius: 12px; border: 0.5px solid rgba(255,255,255,0.1); backdrop-filter: blur(10px);">
+                                        <div style="margin-bottom: 12px; display:flex; align-items:center; gap:8px; font-weight:600; color:#fff; font-size:14px;"><i style="font-style:normal;">🗺️</i> 物理设施 2D 拓扑大屏 - ${data.args.zone || '全量视图'}</div>
+                                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+                                            ${rackHtml}
+                                        </div>
+                                    </div>`;
+                                }
+                                traceContainer.innerHTML += `<div style="color: #60a5fa; margin-bottom:4px;">📡 下发探针: <span style="color: #93c5fd; background: rgba(59,130,246,0.1); padding: 2px 6px; border-radius: 4px;">${data.name}</span></div>`;
+                            } else if (data.event === "observation") {
+                                traceContainer.innerHTML += `<div style="color: #34d399; margin-bottom:4px; padding-left:14px; border-left:1px solid #059669;">✓ 数据回流: ${data.result}</div>`;
+                            } else if (data.event === "approval_required") {
+                                traceContainer.innerHTML += `
+                                <div id="approval-${data.session_id}" style="margin:10px 0; padding:12px; background: rgba(255,69,58,0.15); border: 1px solid rgba(255,69,58,0.5); border-radius: 8px;">
+                                    <div style="color:var(--alert-red); font-weight:600; font-size:14px; margin-bottom: 8px;">🚨 拦截高危操作流：${data.tool}</div>
+                                    <div style="color: #fff; font-size:13px; margin-bottom: 12px; font-family: monospace;">参数: ${JSON.stringify(data.args)}</div>
+                                    <div style="display: flex; gap: 10px;">
+                                        <button onclick="handleApproval('${data.session_id}', true, this)" style="background:var(--alert-red); border:none; color:#fff; padding:6px 12px; border-radius:4px; font-weight:600; cursor:pointer;">允许执行</button>
+                                        <button onclick="handleApproval('${data.session_id}', false, this)" style="background:rgba(255,255,255,0.1); border:none; color:#fff; padding:6px 12px; border-radius:4px; cursor:pointer; font-weight:600;">拦截阻断</button>
+                                    </div>
+                                </div>`;
+                            } else if (data.event === "final_chunk") {
+                                accumulatedText += data.text;
+                                agentMsgDiv.dataset.accumulated = accumulatedText;
+                                contentDiv.innerHTML = marked.parse( accumulatedText );
+                            } else if (data.event === "done") {
+                                traceContainer.innerHTML += `<div style="color: var(--theme-blue); margin-top:6px; border-top:1px solid var(--border-color); padding-top:6px;">✨ 决策图谱生成完毕</div>`;
+                                fetchHistory();
+                            }
+                            chatMessages.scrollTop = chatMessages.scrollHeight;
+                        } catch(e) {}
+                    }
+                }
+            } catch(e) {
+                contentDiv.innerHTML = `<span style="color:var(--alert-red)">[系统连接中断]</span>`;
+            } finally {
+                sendBtn.disabled = agentMsgDiv.querySelector('[id^="approval-"]') ? true : false;
+                if (!agentMsgDiv.querySelector('[id^="approval-"]')) {
+                    sendBtn.disabled = false;
+                }
+                currentAlertContext = "用户主动咨询"; 
+                userInput.focus();
+            }
+        }
+
+        window.handleApproval = async function(session_id, approved, btnElement) {
+            const approvalDiv = btnElement.parentElement.parentElement;
+            approvalDiv.innerHTML = `<div style="color:${approved ? 'var(--alert-red)' : 'var(--text-sub)'}; font-weight:bold; font-size:13px;">${approved ? '已授权放行，系统接管中...' : '已人工拦截该操作。系统重新评估态势...'}</div>`;
+            
+            const msgDiv = approvalDiv.closest('.message');
+            const traceWrapper = msgDiv.querySelector('.trace-wrapper');
+            const traceContainer = msgDiv.querySelector('.trace-container');
+            const contentDiv = msgDiv.querySelector('.main-content');
+            let accumulatedText = msgDiv.dataset.accumulated || "";
+            
+            // 确保 chat_session_id 不为 null
+            if (!currentChatSessionId) {
+                currentChatSessionId = session_id || generateSessionId();
+                localStorage.setItem('jinshu_active_session', currentChatSessionId);
+            }
+
+            document.getElementById('send-btn').disabled = true;
+
+            try {
+                const response = await fetch('/api/chat/action', {
+                    method: 'POST', headers: buildHeaders(),
+                    body: JSON.stringify({ 
+                        session_id: session_id, 
+                        approved: approved,
+                        chat_session_id: currentChatSessionId
+                    })
+                });
+                if(!response.ok) {
+                    if (response.status === 401) logout();
+                    throw new Error('API ERROR');
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+
+                while(true) {
+                    const {done, value} = await reader.read();
+                    if(done) break;
+                    buffer += decoder.decode(value, {stream: true});
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop(); 
+                    for(const line of lines) {
+                        if(!line.trim()) continue;
+                        try {
+                            const data = JSON.parse(line);
+                            if (data.event === "error") {
+                                accumulatedText += `\n\n<span style="color:var(--alert-red)">系统处理异常: ${data.error}</span>`;
+                            } else if (data.event === "thought") {
+                                const tDiv = document.createElement('div');
+                                tDiv.style.cssText = "color: #94a3b8; margin-bottom:4px; padding-left:14px; border-left:1px dashed #475569;";
+                                traceContainer.appendChild(tDiv);
+                                tDiv.innerHTML = `💭 `;
+                                for (let i = 0; i < data.text.length; i++) {
+                                    tDiv.innerHTML += data.text.charAt(i);
+                                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                                    await new Promise(r => setTimeout(r, 6)); // 打字机延迟
+                                }
+                            } else if (data.event === "tool_call") {
+                                if (data.name === "visualize_topology") {
+                                    const racks = ["RACK-A01", "RACK-A02", "UPS-A-01", "RACK-B01", "FW-01", "HVAC-A-01"];
+                                    const dangerRacks = data.args.danger_racks || [];
+                                    let rackHtml = '';
+                                    racks.forEach(r => {
+                                        const isDanger = dangerRacks.includes(r);
+                                        rackHtml += `<div style="padding: 10px; margin: 4px; border-radius: 6px; text-align: center; border: 1px solid ${isDanger ? 'rgba(255,69,58,0.8)' : 'rgba(255,255,255,0.1)'}; background: ${isDanger ? 'rgba(255,69,58,0.15)' : 'rgba(255,255,255,0.05)'}; ${isDanger ? 'box-shadow: 0 0 15px rgba(255,69,58,0.4); animation: pulse 2s infinite;' : ''}">
+                                            <div style="font-size:13px; font-weight:600; color:${isDanger?'#ff8080':'#ccc'}; font-family: monospace;">${r}</div>
+                                            <div style="font-size:10px; margin-top:4px; color:${isDanger?'var(--alert-red)':'#666'}">${isDanger?'HIGH RISK':'NORMAL'}</div>
+                                        </div>`;
+                                    });
+                                    if(!document.getElementById('pulse-css')) {
+                                        document.head.insertAdjacentHTML('beforeend', '<style id="pulse-css">@keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255,69,58,0.4); } 70% { box-shadow: 0 0 0 10px rgba(255,69,58,0); } 100% { box-shadow: 0 0 0 0 rgba(255,69,58,0); } }</style>');
+                                    }
+                                    
+                                    contentDiv.innerHTML += `
+                                    <div style="margin: 16px 0; padding: 16px; background: rgba(0,0,0,0.3); border-radius: 12px; border: 0.5px solid rgba(255,255,255,0.1); backdrop-filter: blur(10px);">
+                                        <div style="margin-bottom: 12px; display:flex; align-items:center; gap:8px; font-weight:600; color:#fff; font-size:14px;"><i style="font-style:normal;">🗺️</i> 物理设施 2D 拓扑大屏 - ${data.args.zone || '全量视图'}</div>
+                                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+                                            ${rackHtml}
+                                        </div>
+                                    </div>`;
+                                }
+                                traceContainer.innerHTML += `<div style="color: #60a5fa; margin-bottom:4px;">📡 下发探针: <span style="color: #93c5fd; background: rgba(59,130,246,0.1); padding: 2px 6px; border-radius: 4px;">${data.name}</span></div>`;
+                            } else if (data.event === "observation") {
+                                traceContainer.innerHTML += `<div style="color: #34d399; margin-bottom:4px; padding-left:14px; border-left:1px solid #059669;">✓ 数据回流: ${data.result}</div>`;
+                            } else if (data.event === "approval_required") {
+                                traceContainer.innerHTML += `
+                                <div id="approval-${data.session_id}" style="margin:10px 0; padding:12px; background: rgba(255,69,58,0.15); border: 1px solid rgba(255,69,58,0.5); border-radius: 8px;">
+                                    <div style="color:var(--alert-red); font-weight:600; font-size:14px; margin-bottom: 8px;">🚨 拦截高危操作流：${data.tool}</div>
+                                    <div style="color: #fff; font-size:13px; margin-bottom: 12px; font-family: monospace;">参数: ${JSON.stringify(data.args)}</div>
+                                    <div style="display: flex; gap: 10px;">
+                                        <button onclick="handleApproval('${data.session_id}', true, this)" style="background:var(--alert-red); border:none; color:#fff; padding:6px 12px; border-radius:4px; font-weight:600; cursor:pointer;">允许执行</button>
+                                        <button onclick="handleApproval('${data.session_id}', false, this)" style="background:rgba(255,255,255,0.1); border:none; color:#fff; padding:6px 12px; border-radius:4px; cursor:pointer; font-weight:600;">拦截阻断</button>
+                                    </div>
+                                </div>`;
+                            } else if (data.event === "final_chunk") {
+                                accumulatedText += data.text;
+                                msgDiv.dataset.accumulated = accumulatedText;
+                                contentDiv.innerHTML = marked.parse( accumulatedText );
+                            } else if (data.event === "done") {
+                                fetchHistory();
+                            }
+                        } catch(e) { console.error("Parse error:", e); }
+                    }
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                }
+            } catch(error) {
+                console.error("Chat Error:", error);
+                accumulatedText += "\n\n<span style=\"color:var(--alert-red)\">[系统离线或通信失败]</span>";
+                contentDiv.innerHTML = marked.parse(accumulatedText);
+            } finally {
+                document.getElementById('send-btn').disabled = msgDiv.querySelector('[id^="approval-"]') ? true : false;
+            }
+        }
+
+        async function fetchAlerts() {
+            try {
+                const res = await fetch('/api/alerts', {headers: buildHeaders()});
+                if(res.status === 401) return logout();
+                const data = await res.json();
+                
+                const now = new Date();
+                const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+                document.getElementById('alert-refresh-time').textContent = `更新时间: ${timeStr}`;
+                
+                alertsContainer.innerHTML = '';
+                if(data.alerts.length === 0) {
+                    alertsContainer.innerHTML = `<div style="text-align:center; padding: 20px; color: var(--alert-green); font-size: 13px;">[感知正常] 当前环境态势平稳</div>`;
+                    return;
+                }
+                data.alerts.forEach(alert => {
+                    const el = document.createElement('div');
+                    el.className = `alert-card ${alert.level === 'danger' ? 'danger' : 'warning'}`;
+                    
+                    const isDanger = alert.level === 'danger';
+                    const iconSvg = isDanger 
+                        ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--alert-red)" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>`
+                        : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--alert-yellow)" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>`;
+
+                    let richDetail = "暂无详情";
+                    if (alert.detail) {
+                        richDetail = alert.detail.replace(/\|/g, '<span style="color:rgba(255,255,255,0.15); margin: 0 6px;">|</span>');
+                        richDetail = richDetail.replace(/(\d+(\.\d+)?[%°CkW]+)/g, '<span style="color:var(--alert-yellow); font-weight:500;">$1</span>');
+                        richDetail = richDetail.replace(/(故障|过高|告警|偏高)/g, '<span style="color:var(--alert-red); font-weight:500;">$1</span>');
+                    }
+
+                    el.innerHTML = `
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 10px;">
+                            <div style="margin-bottom:0; font-size:14px; display:flex; align-items:center; font-weight:600; color:rgba(255,255,255,0.95); letter-spacing: 0.3px;">
+                                <span style="margin-right:8px; display:flex;">${iconSvg}</span>
+                                ${alert.title}
+                            </div>
+                            <div style="font-size:11px; padding:3px 8px; border-radius:10px; background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.6); border: 0.5px solid rgba(255,255,255,0.05); white-space:nowrap; letter-spacing: 0.2px;">
+                                ${alert.layer === 'Infrastructure' ? '动环设施' : alert.layer === 'Security' ? '安防门禁' : 'IT业务'}
+                            </div>
+                        </div>
+                        <div style="display:block; font-size:12.5px; color:rgba(255,255,255,0.7); line-height:1.6; margin-bottom:14px; background:rgba(0,0,0,0.15); padding:10px 12px; border-radius:8px; border: 0.5px solid rgba(255,255,255,0.03);">
+                            ${richDetail}
+                        </div>
+                        <div style="display:flex; gap:8px; align-items:center;">
+                            <div class="diag-btn" style="flex:1; font-size:12px; background:rgba(10,132,255,0.1); padding:6px 12px; border-radius:12px; color:var(--theme-blue); cursor:pointer; text-align:center; display:flex; align-items:center; justify-content:center; gap:6px; border: 0.5px solid rgba(10,132,255,0.2); transition: all 0.2s;">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                                诊断分析
+                            </div>
+                            <div class="resolve-btn" data-id="${alert.id}" style="font-size:12px; background:rgba(52,199,89,0.1); padding:6px 12px; border-radius:12px; color:var(--alert-green); cursor:pointer; border:0.5px solid rgba(52,199,89,0.2); white-space:nowrap; display:flex; align-items:center; gap:4px; transition: all 0.2s;">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                已解决
+                            </div>
+                        </div>
+                    `;
+                    el.style.height = "auto";
+                    el.style.display = "block";
+
+                    // 诊断按钮 - 填充对话框
+                    el.querySelector('.diag-btn').onclick = (e) => {
+                        e.stopPropagation();
+                        userInput.value = alert.suggestion; 
+                        currentAlertContext = alert.title; 
+                        userInput.focus(); 
+                        userInput.style.height = 'auto';
+                        userInput.style.height = (userInput.scrollHeight) + 'px'; 
+                    };
+
+                    // 已解决按钮 - 销警并复位设备状态
+                    el.querySelector('.resolve-btn').onclick = (e) => {
+                        e.stopPropagation();
+                        resolveAlert(alert.id, el);
+                    };
+
+                    alertsContainer.appendChild(el);
+                });
+            } catch(e) { console.error("Fetch alerts error:", e); }
+        }
+
+        async function resolveAlert(alertId, cardEl) {
+            const btn = cardEl.querySelector('.resolve-btn');
+            btn.textContent = '处理中...';
+            btn.style.opacity = '0.5';
+            btn.style.pointerEvents = 'none';
+            try {
+                const res = await fetch('/api/alerts/resolve', {
+                    method: 'POST',
+                    headers: { ...buildHeaders(), 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ alert_id: alertId })
+                });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    // 卡片消逝动画
+                    cardEl.style.transition = 'all 0.4s ease';
+                    cardEl.style.opacity = '0';
+                    cardEl.style.transform = 'translateX(-20px)';
+                    cardEl.style.maxHeight = cardEl.offsetHeight + 'px';
+                    setTimeout(() => {
+                        cardEl.style.maxHeight = '0';
+                        cardEl.style.padding = '0';
+                        cardEl.style.marginBottom = '0';
+                    }, 350);
+                    setTimeout(() => cardEl.remove(), 700);
+                } else {
+                    btn.textContent = '✓ 已解决';
+                    btn.style.opacity = '1';
+                    btn.style.pointerEvents = 'auto';
+                    alert('操作失败：' + (data.detail || '未知错误'));
+                }
+            } catch(e) {
+                btn.textContent = '✓ 已解决';
+                btn.style.opacity = '1';
+                btn.style.pointerEvents = 'auto';
+                console.error('Resolve alert failed:', e);
+            }
+        }
+
+        async function fetchHistory() {
+            try {
+                const res = await fetch('/api/history', {headers: buildHeaders()});
+                if(!res.ok) return;
+                const data = await res.json();
+                document.getElementById('history-count').textContent = `${data.records.length} 条归档`;
+                historyContainer.innerHTML = '';
+                if(data.records.length === 0) {
+                    historyContainer.innerHTML = `<div style="text-align:center; padding: 20px; color: var(--text-sub); font-size: 13px;">暂无排障记录</div>`;
+                    return;
+                }
+                data.records.forEach(rec => {
+                    const el = document.createElement('div');
+                    el.className = 'history-record';
+                    el.style.cursor = 'pointer';
+                    el.style.transition = 'all 0.2s';
+                    el.onmouseover = () => el.style.background = 'rgba(255,255,255,0.08)';
+                    el.onmouseout = () => el.style.background = 'rgba(255,255,255,0.03)';
+                    el.onclick = () => loadHistoricalChat(rec);
+                    el.innerHTML = `
+                        <div class="record-header" style="border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 6px; margin-bottom: 8px;">
+                            <span class="record-op">归档人: ${rec.operator || '系统自动'}</span>
+                            <span class="record-time">${rec.timestamp}</span>
+                        </div>
+                        <div style="font-size:13px; font-weight:600; color:var(--text-main); margin-bottom:4px; max-height:40px; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;">
+                            <i style="font-style:normal; color:var(--theme-blue); margin-right:4px;">💬</i>${rec.question || '交互式诊断进程'}
+                        </div>
+                        <div class="record-trigger" style="font-size:11px; opacity:0.7; margin:0;">[关联标签]: ${rec.trigger}</div>
+                    `;
+                    historyContainer.appendChild(el);
+                });
+
+                // --- 自动恢复 Session 逻辑 ---
+                const savedSessionId = localStorage.getItem('jinshu_active_session');
+                // 只有在页面初始加载（currentChatSessionId 为空）时才尝试自动恢复
+                if (savedSessionId && !currentChatSessionId) {
+                    const matchingRecord = data.records.find(r => r.session_id === savedSessionId);
+                    if (matchingRecord) {
+                        loadHistoricalChat(matchingRecord, true); // true 表示自动恢复
+                    }
+                }
+            } catch(e) {}
+        }
+
+        function loadHistoricalChat(rec, isAutoRestore=false) {
+            currentChatSessionId = rec.session_id; // 切换到该对局 ID
+            localStorage.setItem('jinshu_active_session', currentChatSessionId); // 保存到本地
+            
+            chatMessages.innerHTML = `
+                <div style="text-align:center; margin: 16px 0;">
+                    <span style="background: rgba(10, 132, 255, 0.1); padding: 4px 12px; border-radius: 12px; font-size: 11px; color: #0A84FF; border: 0.5px solid rgba(10, 132, 255, 0.3);">
+                        ${isAutoRestore ? '⚡ 已为您自动恢复之前的对局环境' : '⚡ 已恢复历史对局环境'}：${rec.timestamp}
+                    </span>
+                </div>
+            `;
+            
+            if (rec.turns && rec.turns.length > 0) {
+                rec.turns.forEach(turn => {
+                    addMessage(turn.question, true);
+                    // 传入保存的 trace 进行深度还原
+                    addMessage(turn.solution, false, turn.trace || []);
+                });
+            }
+            
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            sendBtn.disabled = false; // 允许继续聊
+            userInput.placeholder = "正在接续历史对局，请输入后续指令...";
+            userInput.focus();
+        }
+
+        verifySession();
+    </script>
+
+</body>
+</html>
