@@ -318,6 +318,7 @@ cloud_worker_obj = LangGraphWorkerNode(
         "record_expert_experience",
         "execute_python_codeact",
         "explore_hypothesis_tree",
+        "assess_blast_radius",
     ]
 )
 

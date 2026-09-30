@@ -42,6 +42,7 @@ def main():
             "record_expert_experience",
             "execute_python_codeact",
             "explore_hypothesis_tree",
+            "assess_blast_radius",
         ],
         "L2_Sec": [
             "analyze_security",

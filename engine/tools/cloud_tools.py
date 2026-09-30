@@ -597,3 +597,32 @@ def record_expert_experience(target_device_id, fault_type, root_cause, resolutio
         return f"❌ 经验刻录失败: {str(e)}"
 
     return f"✨ 【数字倒影】刻录成功！已将设备 {target_device_id} 的异常体征与专家方案持久化入库 (ID: {new_fp['fingerprint_id']})。未来同类隐患将被秒级预警。"
+
+
+@registry.register(
+    name="assess_blast_radius",
+    description="【爆炸半径评估引擎】在执行具有潜在破坏性或配置变更操作（如重启、隔离、断电、迁移）前，"
+    "基于 L1-L7 全栈有向因果拓扑图谱，正向穿透计算下游波及主机、金融业务 SLA 评级及法定仲裁 Quorum 风险。"
+    "输出综合风险评级（LOW/MEDIUM/HIGH）与审批建议。",
+    parameters={
+        "type": "object",
+        "properties": {
+            "target_id": {
+                "type": "string",
+                "description": "拟定处置目标标识（如 'SVR-001'、'RACK-A02'、'PDU-A01'）",
+            },
+            "action": {
+                "type": "string",
+                "description": "拟执行的操作类型（如 'reboot', 'isolate', 'poweroff', 'failover'）",
+                "default": "reboot",
+            },
+        },
+        "required": ["target_id"],
+    },
+    risk_level=RiskLevel.SAFE,
+)
+def assess_blast_radius(target_id: str, action: str = "reboot") -> str:
+    from engine.memory.topology_graph import global_topology_graph
+
+    res = global_topology_graph.calculate_blast_radius(target_id=target_id, action=action)
+    return res["summary"]

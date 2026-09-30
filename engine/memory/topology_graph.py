@@ -176,6 +176,71 @@ class DatacenterTopologyGraph:
 
         return "\n".join(lines)
 
+    def calculate_blast_radius(self, target_id: str, action: str = "reboot") -> Dict[str, Any]:
+        """
+        计算拟执行操作的拓扑爆炸半径 (Blast Radius Assessment)。
+        基于多跳因果图谱正向穿透计算下游波及业务、关键 SLA 评级、法定仲裁 Quorum 影响及风险评级。
+        """
+        if target_id not in self.nodes:
+            return {
+                "target_id": target_id,
+                "action": action,
+                "risk_tier": "UNKNOWN",
+                "impacted_count": 0,
+                "impacted_nodes": [],
+                "critical_workloads": [],
+                "requires_approval": False,
+                "summary": f"实体 {target_id} 不在拓扑库中，爆炸半径未明。"
+            }
+
+        target_node = self.nodes[target_id]
+        downstream = self.trace_downstream_impact(target_id, depth=3)
+
+        impacted_nodes = [item["node_id"] for item in downstream]
+        critical_workloads = []
+        quorum_risks = []
+
+        for item in downstream:
+            props = item.get("properties", {})
+            tier = props.get("tier", "")
+            if tier == "TIER_1_CRITICAL" or "CRITICAL" in tier:
+                critical_workloads.append(f"{item['name']} ({item['node_id']})")
+            if "quorum_min" in props:
+                quorum_risks.append(f"{item['name']}: 最低仲裁数 {props['quorum_min']}")
+
+        if critical_workloads or quorum_risks or len(impacted_nodes) >= 3 or action.lower() in ("reboot", "restart", "poweroff", "isolate"):
+            risk_tier = "HIGH"
+            requires_approval = True
+        elif len(impacted_nodes) > 0:
+            risk_tier = "MEDIUM"
+            requires_approval = False
+        else:
+            risk_tier = "LOW"
+            requires_approval = False
+
+        summary_lines = [
+            "💥 【爆炸半径评估报告 (Blast Radius Assessment)】",
+            f"  - 目标对象: {target_node.name} [{target_node.id}] (层级: {target_node.layer})",
+            f"  - 拟定处置动作: {action.upper()}",
+            f"  - 综合风险评级: {'🔴 HIGH (需双人复核审批)' if risk_tier == 'HIGH' else ('🟡 MEDIUM' if risk_tier == 'MEDIUM' else '🟢 LOW (安全)')}",
+            f"  - 波及下游拓扑实体: {len(impacted_nodes)} 个 {impacted_nodes}",
+        ]
+        if critical_workloads:
+            summary_lines.append(f"  - 🚨 涉及核心金融业务 (Tier-1): {', '.join(critical_workloads)}")
+        if quorum_risks:
+            summary_lines.append(f"  - ⚠️ 分布式仲裁警告: {', '.join(quorum_risks)}")
+
+        return {
+            "target_id": target_id,
+            "action": action,
+            "risk_tier": risk_tier,
+            "impacted_count": len(impacted_nodes),
+            "impacted_nodes": impacted_nodes,
+            "critical_workloads": critical_workloads,
+            "requires_approval": requires_approval,
+            "summary": "\n".join(summary_lines)
+        }
+
 
 # 全局单例拓扑图
 global_topology_graph = DatacenterTopologyGraph()

@@ -34,3 +34,14 @@ def test_topology_summary_context():
     assert "RACK-A02" in summary
     assert "上游供电与制冷诱因链路" in summary
     assert "下游受影响主机与金融业务 SLA 链路" in summary
+
+
+def test_calculate_blast_radius():
+    graph = DatacenterTopologyGraph()
+    # 评估重启 SVR-001 的爆炸半径（下游有 VM-PAYMENT-01 Tier 1 业务）
+    res = graph.calculate_blast_radius("SVR-001", action="reboot")
+    assert res["risk_tier"] == "HIGH"
+    assert res["requires_approval"] is True
+    assert "VM-PAYMENT-01" in res["impacted_nodes"]
+    assert len(res["critical_workloads"]) > 0
+    assert "爆炸半径评估报告" in res["summary"]
