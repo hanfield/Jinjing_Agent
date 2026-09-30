@@ -1,8 +1,8 @@
 from engine.memory.episodic_memory import EpisodicMemoryEngine, IncidentEpisode
 
 
-def test_episodic_memory_custom_episode():
-    engine = EpisodicMemoryEngine(data_dir="/tmp/non_existent")
+def test_episodic_memory_custom_episode(tmp_path):
+    engine = EpisodicMemoryEngine(data_dir=str(tmp_path / "episodes"))
     # 手动添加一段检修案卷
     engine.episodes.append(IncidentEpisode(
         id="EP-001",
@@ -20,8 +20,8 @@ def test_episodic_memory_custom_episode():
     assert "空调排水管" in results[0]["root_cause"]
 
 
-def test_few_shot_formatting():
-    engine = EpisodicMemoryEngine(data_dir="/tmp/non_existent")
+def test_few_shot_formatting(tmp_path):
+    engine = EpisodicMemoryEngine(data_dir=str(tmp_path / "episodes"))
     engine.episodes.append(IncidentEpisode(
         id="EP-002",
         title="UPS输出纹波超标",

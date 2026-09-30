@@ -1,8 +1,7 @@
-import os
 import json
 from harness.tasks.task_registry import TaskRegistry, BenchmarkTask
 
-def test_registry_loading():
+def test_registry_loading(tmp_path):
     """测试 TaskRegistry 能否正确加载测试套件配置"""
     # 构造一个临时配置文件
     test_config = {
@@ -19,13 +18,13 @@ def test_registry_loading():
                     "expected_experts": ["Mock_Agent"],
                     "max_latency_ms": 1000.0,
                     "max_tokens": 1000,
-                    "requires_approval_intercept": False
-                }
+                    "requires_approval_intercept": False,
+                },
             }
-        ]
+        ],
     }
 
-    config_path = "/tmp/test_eval.json"
+    config_path = str(tmp_path / "test_eval.json")
     with open(config_path, "w", encoding="utf-8") as f:
         json.dump(test_config, f)
 
@@ -41,6 +40,3 @@ def test_registry_loading():
     assert isinstance(task, BenchmarkTask)
     assert task.golden_metrics.expected_tools == ["mock_tool"]
     assert task.golden_metrics.max_latency_ms == 1000.0
-
-    # 清理临时文件
-    os.remove(config_path)

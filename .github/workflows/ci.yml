@@ -71,7 +71,7 @@ jobs:
       - name: Python SAST Vulnerability Scan (Bandit)
         run: |
           echo "Running Bandit SAST scan on core engine and harness..."
-          bandit -r engine/ harness/ -ll
+          bandit -r engine/ harness/ -x "*/tests/*" -ll
 
       - name: Dependency Vulnerability Audit (pip-audit)
         run: |

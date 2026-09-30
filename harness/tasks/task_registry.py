@@ -7,7 +7,7 @@
 
 import os
 import json
-import urllib.request
+import httpx
 from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
 
@@ -44,10 +44,10 @@ class BenchmarkTask:
                     with open(path, "r", encoding="utf-8") as f:
                         return json.load(f)
             # 如果是远程 HTTP 快照库
-            elif self.snapshot_uri.startswith("http"):
-                req = urllib.request.Request(self.snapshot_uri, headers={'User-Agent': 'JinShu-Harness/2.0'})
-                with urllib.request.urlopen(req, timeout=5) as response:
-                    return json.loads(response.read().decode('utf-8'))
+            elif self.snapshot_uri.startswith(("http://", "https://")):
+                resp = httpx.get(self.snapshot_uri, headers={"User-Agent": "JinShu-Harness/2.0"}, timeout=5.0)
+                if resp.status_code == 200:
+                    return resp.json()
         except Exception as e:
             print(f"⚠️ [Data Hydration] 无法拉取快照 {self.snapshot_uri}: {e}。退回 mock_env_state。")
 
