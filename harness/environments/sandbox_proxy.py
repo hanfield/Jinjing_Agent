@@ -109,19 +109,61 @@ class SandboxProxyHarness:
         if failure_rate > 0 and random.random() < failure_rate:
             raise Exception(f"[Sandbox Chaos] 503 Service Unavailable for tool {tool_name}")
             
-        # 3. 拦截并返回模拟数据 (Mock API Router)
+        # 3. 交互式状态转移靶场逻辑 (Interactive State Transition Engine)
         if tool_name == "fingerprint_early_warning":
-            return {"status": "warning", "details": "Detected thermal anomaly in A02"}
+            rack_info = self.active_state.get("racks", {}).get("RACK-A02", {})
+            current_temp = rack_info.get("temp", 28.5)
+            return {
+                "status": "warning",
+                "target": "RACK-A02",
+                "current_temp": current_temp,
+                "delta_t_warning": current_temp > 27.0,
+                "details": f"检测到 RACK-A02 热力学指纹异动，当前机柜温度: {current_temp}°C，存在局部冷通道漏风特征"
+            }
+
         elif tool_name == "resolve_spatial_topology":
-            return {"connected_nodes": ["UPS-A-01", "RACK-A02"]}
+            target = args.get("asset_id", "RACK-A02")
+            from engine.memory import global_topology_graph
+            up = [n["node_id"] for n in global_topology_graph.trace_upstream_cause(target, depth=2)]
+            down = [n["node_id"] for n in global_topology_graph.trace_downstream_impact(target, depth=2)]
+            return {
+                "target": target,
+                "upstream_power_cooling": up,
+                "downstream_compute_sla": down,
+                "connected_nodes": up + down
+            }
+
+        elif tool_name == "analyze_cooling":
+            # 仿真环境状态转移：增加冷通道送风，机房热量平滑下降
+            if "racks" in self.active_state:
+                for r_id in self.active_state["racks"]:
+                    self.active_state["racks"][r_id]["temp"] = round(max(20.0, self.active_state["racks"][r_id].get("temp", 25.0) - 2.8), 1)
+            return {
+                "status": "success",
+                "action": "cool_channel_adjusted",
+                "delta_freq_hz": "+5Hz",
+                "resulting_racks_temp": {r_id: m.get("temp") for r_id, m in self.active_state.get("racks", {}).items()}
+            }
+
         elif tool_name == "restart_server":
             target = args.get("server_id")
             if not target:
                 raise ValueError("Missing required argument: server_id")
-            return {"status": "success", "message": f"Server {target} reboot initiated."}
+            
+            # 仿真状态转移：重启主机后，局部热量释放降载，服务进入健康就绪
+            if "servers" in self.active_state and target in self.active_state["servers"]:
+                self.active_state["servers"][target]["status"] = "REBOOTED_HEALTHY"
+                self.active_state["servers"][target]["cpu_load"] = 0.05
+            
+            return {
+                "status": "success",
+                "message": f"Server {target} reboot sequence initiated successfully. Quorum preserved.",
+                "post_state": "HEALTHY_ACTIVE"
+            }
         
         # 默认回落
         return {"status": "executed", "mocked": True}
+
 
     def record_tool_call(self, agent_id: str, tool_name: str, args: Dict[str, Any]):
         """记录底层工具调用轨迹"""

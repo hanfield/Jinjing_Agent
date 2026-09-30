@@ -23,8 +23,10 @@ Operating strictly in an **advisory and consultative role (Human-in-the-Loop)**,
 - **Star-Topology Multi-Agent Engine**: Orchestrates specialized agents (Supervisor, Worker, Guardrail, Summarizer) communicating through a shared **Global Blackboard** and an asynchronous Event Bus.
 - **L1–L7 Cross-Domain Telemetry Fusion**: Correlates chiller airflow and UPS redundancy metrics with hypervisor CPU loads and database connection pool bottlenecks.
 - **Predictive Precision Cooling**: Proactively forecasts hotspot progression based on IT traffic surge predictions, recommending HVAC frequency adjustments before PDU limits trip.
-- **Industrial-Grade Evaluation Harness**: Features transparent sandbox proxying (`SandboxProxyHarness`), chaos engineering injection (latency jitters, intermittent 5xx faults), and dual-core telemetry evaluation (Engineering metrics + LLM-as-a-Judge).
-- **Self-Evolving Data Flywheel**: Logs production runs, TTFT (Time To First Token), and span traces into an embedded SQLite store (`flywheel.db`), deterministically compiling high-signal datasets for SFT and DPO alignment.
+- **Multi-Agent Debate & Consensus (Phase 2)**: Resolves multi-objective conflicts between physical cooling (PUE optimization) and cloud workloads (SLA protection) via Pareto-optimal arbitration.
+- **Tiered Memory & Topology GraphRAG (Phase 2)**: Couples L1-L7 physical/logical infrastructure graph relations with episodic memory retrieval for historical incident few-shot injection.
+- **Stateful Datacenter Gym & Harness (Phase 2)**: Features an interactive thermodynamic state machine sandbox with chaos injection, moving beyond static mocks.
+- **Self-Evolving Data Flywheel**: Logs production runs, TTFT, and span traces into SQLite (`flywheel.db`), compiling high-signal datasets for SFT and DPO alignment.
 
 ---
 
@@ -35,28 +37,36 @@ graph TD
     User["DevOps / Infrastructure Engineer"] -->|Natural Language / Alert Trigger| WebUI["Cyber Command Center (Web UI)"]
     WebUI -->|Streaming NDJSON| FastAPI["FastAPI Gateway (main_v2.py)"]
 
+    subgraph Memory_Layer ["Tiered Memory & GraphRAG (engine/memory/)"]
+        TopoGraph["L1-L7 Topology Graph (Multi-Hop Causal Tracing)"]
+        EpisodicMem["Episodic Memory (Historical SOP Few-Shot Retrieval)"]
+    end
+
     subgraph Core_Engine ["Jin-Shu Multi-Agent Core (engine/)"]
         FastAPI --> Supervisor["Supervisor Node (Intent Routing)"]
-        Supervisor <--> Blackboard[("Global Shared Blackboard")]
+        Supervisor <--> StateStore[("LangGraph JinShuState")]
         
-        Supervisor --> Worker["Specialized Worker Node"]
+        Supervisor --> Worker["Specialized Worker Node (L2_Infra / L2_Cloud / L2_Sec)"]
         Worker <--> ToolsGate{{"Tool Dispatch & MCP Gateway"}}
         
         ToolsGate --> CloudTools["OpenStack / Virtualization Tools"]
         ToolsGate --> InfraTools["HVAC / Power / Sensor Mocks"]
         ToolsGate --> SecurityTools["Access Control & Video Patrol"]
-        ToolsGate --> RAGTools["Expert Knowledge / Fault Fingerprints"]
 
-        Worker --> Guardrail["Guardrail Node (Safety & Compliance)"]
-        Guardrail --> Summarizer["Summarizer Node (SOP Card Generation)"]
+        Worker --> DebateGateway{"Debate & Consensus Gate (Phase 2)"}
+        DebateGateway -->|Multi-Agent Debate| Consensus["Pareto Consensus Engine"]
+        Consensus --> Summarizer["Summarizer Node (SOP Card Generation)"]
     end
+
+    Worker <--> Memory_Layer
 
     subgraph Data_Flywheel ["Evaluation & Flywheel (harness/ & finetune/)"]
-        FastAPI -.-> Harness["Enterprise Harness (Sandbox + Chaos)"]
+        FastAPI -.-> Harness["Interactive Datacenter Gym (Thermodynamic Simulation)"]
         Harness --> SQLiteDB[("flywheel.db (Telemetry & Traces)")]
         SQLiteDB --> Exporter["SFT & DPO Dataset Exporter"]
-        Exporter --> FineTune["LoRA / MLX Fine-Tuning Pipelines"]
+        Exporter --> FineTune["LoRA / MLX Fine-Tuning Pipelines (QwQ-32B)"]
     end
+
 
     Summarizer -->|Structured SOP Cards / Health Radars| WebUI
 ```

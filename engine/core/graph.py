@@ -37,6 +37,7 @@ from .state import JinShuState
 from engine.nodes.guardrail import guardrail_node, route_after_guardrail
 from engine.nodes.supervisor import supervisor_node, route_to_workers
 from engine.nodes.worker import infra_worker_node, cloud_worker_node, sec_worker_node
+from engine.nodes.debate import debate_consensus_node, should_enter_debate
 from engine.nodes.summarizer import summarizer_node
 
 
@@ -51,15 +52,19 @@ async def approval_gate_node(state: JinShuState) -> dict:
     return {}
 
 
-def route_after_worker(state: JinShuState) -> Literal["approval_gate", "summarizer"]:
+def route_after_worker(state: JinShuState) -> Literal["approval_gate", "debate_node", "summarizer"]:
     """
     Worker 节点运行后的条件边。
-    若 worker 需要审批，状态中 pending_approval 不为空，则分流到 approval_gate 挂起。
-    否则收拢到 summarizer。
+    1. 若 worker 需要审批，状态中 pending_approval 不为空，则分流到 approval_gate 挂起。
+    2. 若动环与云原生专家同时介入产生多目标冲突，则进入多智能体辩论与共识节点 (debate_node)。
+    3. 否则收拢到 summarizer。
     """
     if state.get("pending_approval") is not None:
         return "approval_gate"
+    if should_enter_debate(state):
+        return "debate_node"
     return "summarizer"
+
 
 
 def route_after_approval_gate(
@@ -93,6 +98,7 @@ def build_graph():
     workflow.add_node("cloud_worker", cloud_worker_node)
     workflow.add_node("sec_worker", sec_worker_node)
     workflow.add_node("approval_gate", approval_gate_node)
+    workflow.add_node("debate_node", debate_consensus_node)
     workflow.add_node("summarizer", summarizer_node)
 
     # 3. 设置入口边
@@ -120,31 +126,15 @@ def build_graph():
         }
     )
 
-    # 6. 配置各 Worker 专家节点的条件边（判断是否需要挂起审批）
-    workflow.add_conditional_edges(
-        "infra_worker",
-        route_after_worker,
-        {
-            "approval_gate": "approval_gate",
-            "summarizer": "summarizer"
-        }
-    )
-    workflow.add_conditional_edges(
-        "cloud_worker",
-        route_after_worker,
-        {
-            "approval_gate": "approval_gate",
-            "summarizer": "summarizer"
-        }
-    )
-    workflow.add_conditional_edges(
-        "sec_worker",
-        route_after_worker,
-        {
-            "approval_gate": "approval_gate",
-            "summarizer": "summarizer"
-        }
-    )
+    # 6. 配置各 Worker 专家节点的条件边（判断是否需要挂起审批或进入学术辩论）
+    worker_target_map = {
+        "approval_gate": "approval_gate",
+        "debate_node": "debate_node",
+        "summarizer": "summarizer"
+    }
+    workflow.add_conditional_edges("infra_worker", route_after_worker, worker_target_map)
+    workflow.add_conditional_edges("cloud_worker", route_after_worker, worker_target_map)
+    workflow.add_conditional_edges("sec_worker", route_after_worker, worker_target_map)
 
     # 7. 配置审批拦截门恢复后的条件边（跳转回对应 Worker 接续循环）
     workflow.add_conditional_edges(
@@ -158,8 +148,12 @@ def build_graph():
         }
     )
 
-    # 8. 汇总完毕后结束
+    # 8. 辩论达成共识后，流向汇总节点
+    workflow.add_edge("debate_node", "summarizer")
+
+    # 9. 汇总完毕后结束
     workflow.add_edge("summarizer", END)
+
 
     # 9. 编译图，配置内存检查点和审批门前置拦截（实现零编码 Session 挂起与恢复）
     memory = MemorySaver()

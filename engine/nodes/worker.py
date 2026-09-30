@@ -249,7 +249,23 @@ class LangGraphWorkerNode:
             top_ev = sorted(chain, key=lambda x: x["confidence"], reverse=True)[0]
             summary_lines.append(f"\n#### 🏆 全局最高置信度判定: [{top_ev['source_agent']}] -> {top_ev['risk_summary']}")
 
+        # ── Phase 2 记忆层注入 ──────────────────────────────────────────
+        from engine.memory import global_topology_graph, global_episodic_memory
+        
+        # 1. 注入 L1-L7 空间拓扑图谱追溯 (Topology GraphRAG)
+        affected_targets = state.get("affected_hosts", [])
+        for target in affected_targets:
+            topo_ctx = global_topology_graph.get_summary_context(target)
+            if topo_ctx:
+                summary_lines.append(f"\n{topo_ctx}")
+
+        # 2. 注入历史相似工单与故障指纹先验 (Episodic Memory)
+        few_shot = global_episodic_memory.format_as_few_shot(state.get("user_message", ""), top_k=2)
+        if few_shot:
+            summary_lines.append(f"\n{few_shot}")
+
         return "\n".join(summary_lines)
+
 
 
 
