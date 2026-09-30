@@ -29,6 +29,8 @@ def main():
             "fingerprint_early_warning",
             "visualize_topology",
             "analyze_thermal_infrared_matrix",
+            "execute_python_codeact",
+            "explore_hypothesis_tree",
         ],
         "L2_Cloud": [
             "query_infrastructure",
@@ -38,6 +40,8 @@ def main():
             "execute_remote_command",
             "restart_server",
             "record_expert_experience",
+            "execute_python_codeact",
+            "explore_hypothesis_tree",
         ],
         "L2_Sec": [
             "analyze_security",

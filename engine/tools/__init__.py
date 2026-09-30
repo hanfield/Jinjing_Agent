@@ -8,6 +8,8 @@ import engine.tools.infra_tools as infra_tools
 import engine.tools.cloud_tools as cloud_tools
 import engine.tools.security_tools as security_tools
 import engine.tools.vision_tools as vision_tools
+import engine.tools.codeact_sandbox as codeact_sandbox
+import engine.nodes.hypothesis_tree as hypothesis_tree
 
 __all__ = [
     "registry",
@@ -18,5 +20,7 @@ __all__ = [
     "cloud_tools",
     "security_tools",
     "vision_tools",
+    "codeact_sandbox",
+    "hypothesis_tree",
 ]
 

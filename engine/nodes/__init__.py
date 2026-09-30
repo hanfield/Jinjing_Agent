@@ -22,6 +22,15 @@ def __getattr__(name: str):
     elif name == "summarizer_node":
         from .summarizer import summarizer_node
         return summarizer_node
+    elif name == "HypothesisTreeExplorer":
+        from .hypothesis_tree import HypothesisTreeExplorer
+        return HypothesisTreeExplorer
+    elif name == "global_hypothesis_explorer":
+        from .hypothesis_tree import global_hypothesis_explorer
+        return global_hypothesis_explorer
+    elif name == "explore_hypothesis_tree":
+        from .hypothesis_tree import explore_hypothesis_tree
+        return explore_hypothesis_tree
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 __all__ = [
@@ -30,4 +39,7 @@ __all__ = [
     "route_to_workers",
     "make_worker_node",
     "summarizer_node",
+    "HypothesisTreeExplorer",
+    "global_hypothesis_explorer",
+    "explore_hypothesis_tree",
 ]

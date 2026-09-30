@@ -301,6 +301,8 @@ infra_worker_obj = LangGraphWorkerNode(
         "fingerprint_early_warning",
         "visualize_topology",
         "analyze_thermal_infrared_matrix",
+        "execute_python_codeact",
+        "explore_hypothesis_tree",
     ]
 )
 
@@ -314,6 +316,8 @@ cloud_worker_obj = LangGraphWorkerNode(
         "execute_remote_command",
         "restart_server",
         "record_expert_experience",
+        "execute_python_codeact",
+        "explore_hypothesis_tree",
     ]
 )
 
