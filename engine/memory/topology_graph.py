@@ -8,7 +8,7 @@
   - 下游影响：宿主机宕机 -> 穿透计算受影响的云主机、容器及上层金融业务 SLA。
 """
 
-from typing import Dict, Any, List, Set, Optional
+from typing import Dict, Any, List, Set
 from dataclasses import dataclass, field
 
 

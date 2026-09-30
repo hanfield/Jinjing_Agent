@@ -8,7 +8,6 @@
 import time
 from typing import Dict, Any
 from harness.tasks.task_registry import BenchmarkTask
-from harness.environments.sandbox_proxy import SandboxProxyHarness
 from harness.adapters.base_adapter import BaseAgentAdapter
 
 from engine.core import multi_agent_orchestrator
@@ -22,14 +21,14 @@ class JinShuAgentAdapter(BaseAgentAdapter):
         # 使用水合后的真实数据初始化沙箱
         state = task.hydrate_state()
         self.sandbox.setup_sandbox(state, task.chaos_config)
-        
+
         start_time = time.time()
         first_token_time = None
         full_response = []
         executed_tools = []
         invoked_experts = set()
         approval_triggered = False
-        
+
         # 记录 Span Traces
         span_traces = []
 
@@ -46,10 +45,10 @@ class JinShuAgentAdapter(BaseAgentAdapter):
                 tool_name = event.get("name")
                 executed_tools.append(tool_name)
                 args = event.get("args", {})
-                
+
                 # 企业级沙箱：拦截并模拟执行
                 await self.sandbox.execute_simulated_api(expert or "system", tool_name, args)
-                
+
             elif event.get("event") == "approval_required":
                 approval_triggered = True
             elif event.get("event") == "final_chunk":
@@ -57,7 +56,7 @@ class JinShuAgentAdapter(BaseAgentAdapter):
 
         elapsed_ms = (time.time() - start_time) * 1000.0
         ttft_ms = (first_token_time - start_time) * 1000.0 if first_token_time else elapsed_ms
-        
+
         # 从沙箱拉取拦截到的工具调用，作为 span_traces 返回
         for call in self.sandbox.intercepted_tool_calls:
             span_traces.append({

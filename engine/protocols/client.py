@@ -77,27 +77,27 @@ class ModbusTCPClient:
         # 请求格式：2B 事务ID, 2B 协议ID (0), 2B 长度 (6), 1B 单元ID, 1B 功能码(3), 2B 寄存器地址, 2B 数量
         transaction_id = 1
         request = struct.pack(">HHHBBHH", transaction_id, 0, 6, unit_id, 3, start_address, quantity)
-        
+
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
                 sock.settimeout(timeout)
                 sock.connect((self.host, self.port))
                 sock.sendall(request)
-                
+
                 # 读取响应头 (9 字节)
                 header = sock.recv(9)
                 if len(header) < 9:
                     raise ConnectionError("Modbus TCP connection closed prematurely or headers short")
-                
+
                 _, _, _, resp_unit_id, fc, byte_count = struct.unpack(">HHHBBB", header)
                 if fc != 3:
                     raise ValueError(f"Modbus returned exception error code: {fc}")
-                
+
                 # 读取数据区
                 data = sock.recv(byte_count)
                 if len(data) < byte_count:
                     raise ConnectionError("Modbus TCP payload truncated")
-                
+
                 # 解包寄存器 (每个寄存器 2 字节)
                 num_registers = byte_count // 2
                 registers = list(struct.unpack(f">{num_registers}H", data))
@@ -180,18 +180,18 @@ class OpenStackClient:
                 },
             }
         }
-        
+
         try:
             with httpx.Client(timeout=10.0) as client:
                 resp = client.post(f"{base_url}/auth/tokens", json=payload, headers={"Content-Type": "application/json"})
                 if resp.status_code != 201:
                     logger.warning(f"[OpenStackClient] Keystone auth failed: {resp.status_code} {resp.text}")
                     return "", {}
-                
+
                 token = resp.headers.get("X-Subject-Token")
                 body = resp.json()
                 catalog = body.get("token", {}).get("catalog", [])
-                
+
                 # 解析 auth_ip
                 try:
                     auth_ip = urlparse(base_url).hostname
@@ -213,7 +213,7 @@ class OpenStackClient:
                         except Exception:
                             pass
                         endpoints[svc_type] = url
-                
+
                 return token, endpoints
         except Exception as e:
             logger.warning(f"[OpenStackClient] Auth failed: {e}")
@@ -223,12 +223,12 @@ class OpenStackClient:
         """从 Nova、Neutron、Cinder、Glance 获取真实或模拟的云资源"""
         token, endpoints = self._authenticate_and_resolve()
         resources = {"servers": [], "networks": [], "volumes": [], "images": []}
-        
+
         if not token or not endpoints:
             return resources
 
         headers = {"X-Auth-Token": token, "Accept": "application/json"}
-        
+
         try:
             with httpx.Client(timeout=5.0) as client:
                 # 1. Nova Servers
@@ -250,7 +250,7 @@ class OpenStackClient:
                                 "spec": s.get("flavor", {}).get("id") or s.get("flavor_name", "—"),
                                 "zone": s.get("OS-EXT-AZ:availability_zone", "nova"),
                             })
-                
+
                 # 2. Neutron Networks
                 network_url = endpoints.get("network")
                 if network_url:
@@ -344,7 +344,7 @@ class K8sPrometheusClient:
                         "namespace": ns,
                         "replicas": spec_reps
                     })
-            
+
             # 如果成功获取了任何资源，直接返回，免除模拟
             if resources["nodes"] or resources["pods"]:
                 return resources
@@ -387,7 +387,7 @@ class K8sPrometheusClient:
 # ── 6. 本地协议模拟守护进程 (LocalProtocolDaemon) ─────────────────
 class LocalProtocolDaemon:
     """本地多协议仿真守护进程，绑定真实的网络端口"""
-    
+
     _instance = None
     _lock = threading.Lock()
 
@@ -404,11 +404,11 @@ class LocalProtocolDaemon:
         self._initialized = True
         self.state = {}
         self.load_initial_state()
-        
+
         self.udp_thread = None
         self.tcp_thread = None
         self.http_thread = None
-        
+
         self.running = False
 
     def load_initial_state(self):
@@ -420,7 +420,7 @@ class LocalProtocolDaemon:
         except Exception as e:
             logger.error(f"[Daemon] Failed to load initial state: {e}")
             self.state = {"datacenters": []}
-        
+
         # 额外初始化容器和监控状态，以便动态修改
         self.state["kubernetes"] = {
             "deployments": {
@@ -440,11 +440,11 @@ class LocalProtocolDaemon:
         if self.running:
             return
         self.running = True
-        
+
         self.udp_thread = threading.Thread(target=self._run_snmp_udp, daemon=True)
         self.tcp_thread = threading.Thread(target=self._run_modbus_tcp, daemon=True)
         self.http_thread = threading.Thread(target=self._run_http, daemon=True)
-        
+
         self.udp_thread.start()
         self.tcp_thread.start()
         self.http_thread.start()
@@ -481,10 +481,10 @@ class LocalProtocolDaemon:
         ups_list = []
         for dc in self.state.get("datacenters", []):
             ups_list.extend(dc.get("ups", []))
-            
+
         if not ups_list:
             return 0
-            
+
         if "ups.1.load" in oid or oid.endswith(".101"):
             return int(ups_list[0].get("load_percent", 50))
         elif "ups.1.battery" in oid or oid.endswith(".102"):
@@ -502,13 +502,13 @@ class LocalProtocolDaemon:
             server.bind((LOCAL_IP, MODBUS_PORT))
             server.listen(5)
             server.settimeout(1.0)
-            
+
             while self.running:
                 try:
                     conn, _ = server.accept()
                 except socket.timeout:
                     continue
-                    
+
                 threading.Thread(target=self._handle_modbus_client, args=(conn,), daemon=True).start()
 
     def _handle_modbus_client(self, conn: socket.socket):
@@ -519,14 +519,14 @@ class LocalProtocolDaemon:
                     req_data = conn.recv(12)
                     if not req_data or len(req_data) < 12:
                         break
-                    
+
                     tx_id, proto_id, length, unit_id, fc, start_addr, quantity = struct.unpack(">HHHBBHH", req_data)
-                    
+
                     if fc == 3: # Read Holding Registers
                         # 从内存中查取 HVAC 的指标数据
                         values = self._resolve_modbus_registers(unit_id, start_addr, quantity)
                         byte_count = len(values) * 2
-                        
+
                         # 响应报文：2B 事务ID, 2B 协议ID (0), 2B 长度(3 + byte_count), 1B 单元ID, 1B 功能码(3), 1B 字节数, {Data}
                         resp_header = struct.pack(">HHHBBB", tx_id, 0, 3 + byte_count, unit_id, fc, byte_count)
                         resp_data = struct.pack(f">{len(values)}H", *values)
@@ -542,16 +542,16 @@ class LocalProtocolDaemon:
         hvac_list = []
         for dc in self.state.get("datacenters", []):
             hvac_list.extend(dc.get("hvac", []))
-            
+
         hvac = None
         if unit_id == 1 and len(hvac_list) >= 1:
             hvac = hvac_list[0]
         elif unit_id == 2 and len(hvac_list) >= 2:
             hvac = hvac_list[1]
-            
+
         if not hvac:
             return [0] * quantity
-            
+
         # 寄存器映射：
         # 地址 0: 送风温度 (放大 10 倍以支持一位小数，例如 18.5 -> 185)
         # 地址 1: 回风温度 (放大 10 倍，例如 25.0 -> 250)
@@ -575,7 +575,7 @@ class LocalProtocolDaemon:
     def _run_http(self):
         class SimulatedHTTPHandler(BaseHTTPRequestHandler):
             daemon_ref = self
-            
+
             def log_message(self, format, *args):
                 # 禁止终端疯狂输出 HTTP 日志
                 pass
@@ -583,19 +583,19 @@ class LocalProtocolDaemon:
             def do_GET(self):
                 parsed_path = urlparse(self.path)
                 path = parsed_path.path
-                
+
                 # 1. Redfish Chassis Thermal
                 # GET /redfish/v1/Chassis/{chassis_id}/Thermal
                 if path.startswith("/redfish/v1/Chassis/"):
                     chassis_id = path.split("/")[4]
                     self.send_json(self.daemon_ref._get_redfish_thermal(chassis_id))
-                    
+
                 # 2. Redfish System
                 # GET /redfish/v1/Systems/{system_id}
                 elif path.startswith("/redfish/v1/Systems/"):
                     system_id = path.split("/")[4]
                     self.send_json(self.daemon_ref._get_redfish_system(system_id))
-                    
+
                 # 3. OpenStack Nova Servers Detail
                 elif path == "/openstack/compute/v2.1/servers/detail":
                     servers = []
@@ -610,7 +610,7 @@ class LocalProtocolDaemon:
                                 "zone": s.get("zone", "nova-zone-A")
                             })
                     self.send_json({"servers": servers})
-                    
+
                 # 4. OpenStack Nova Flavors
                 elif path == "/openstack/compute/v2.1/flavors/detail":
                     self.send_json({"flavors": [{"id": "1", "name": "m1.medium"}]})
@@ -629,7 +629,7 @@ class LocalProtocolDaemon:
                 elif path == "/openstack/image/v2/images":
                     imgs = [{"id": "img-ubuntu", "name": "Ubuntu 22.04 LTS", "status": "active"}]
                     self.send_json({"images": imgs})
-                    
+
                 # 8. Kubernetes Nodes
                 elif path == "/k8s/api/v1/nodes":
                     self.send_json({
@@ -638,7 +638,7 @@ class LocalProtocolDaemon:
                             {"metadata": {"name": "k8s-node-02"}, "status": {"conditions": [{"type": "Ready", "status": "False"}]}},
                         ]
                     })
-                    
+
                 # 9. Kubernetes Pods
                 elif path == "/k8s/api/v1/namespaces/prod/pods":
                     pods_list = []
@@ -648,7 +648,7 @@ class LocalProtocolDaemon:
                             "status": {"phase": pod["phase"]}
                         })
                     self.send_json({"items": pods_list})
-                    
+
                 # 10. Prometheus PromQL
                 elif path == "/prometheus/api/v1/query":
                     self.send_json({
@@ -676,12 +676,12 @@ class LocalProtocolDaemon:
                 except Exception:
                     pass
                 self.req_stream = req_json.get("stream", False)
-                
+
                 parsed_path = urlparse(self.path)
                 path = parsed_path.path
                 sys.stderr.write(f"[DEBUG Daemon POST] path={path} req={req_json}\n")
                 sys.stderr.flush()
-                
+
                 # 处理 chat completions 接口
                 if path in ("/chat/completions", "/v1/chat/completions"):
                     messages = req_json.get("messages", [])
@@ -692,7 +692,7 @@ class LocalProtocolDaemon:
                             user_prompt = msg["content"]
                         elif msg["role"] == "system":
                             system_prompt = msg["content"]
-                            
+
                     # A. 大模型裁判评估打分
                     if "你是金枢 2.0 资深评测裁判" in system_prompt:
                         resp_content = json.dumps({
@@ -703,7 +703,7 @@ class LocalProtocolDaemon:
                         }, ensure_ascii=False)
                         self.send_openai_response(resp_content)
                         return
-                        
+
                     # B. 总指挥 L1 汇总总结 (Synthesize Summary)
                     if "你是金枢 2.0 L1 总指挥" in system_prompt and "最终给运维总监" in system_prompt:
                         report = (
@@ -733,13 +733,13 @@ class LocalProtocolDaemon:
                         else:
                             self.send_openai_response('["L2_Infra", "L2_Cloud"]')
                         return
-                        
+
                     # D. 各个 L2 专家的工具调用选择与最终答复
                     if "动环与基础设施专家" in system_prompt:
                         # 检查当前是第几次交互（通过 messages 长度判断，或者是最后一条消息内容）
                         has_warning = any(tc.get("function", {}).get("name") == "fingerprint_early_warning" for m in messages if m.get("role") == "assistant" for tc in (m.get("tool_calls") or []))
                         has_topology = any(tc.get("function", {}).get("name") == "resolve_spatial_topology" for m in messages if m.get("role") == "assistant" for tc in (m.get("tool_calls") or []))
-                        
+
                         if not has_warning:
                             self.send_openai_tool_call("fingerprint_early_warning", "{}")
                         elif not has_topology:
@@ -747,7 +747,7 @@ class LocalProtocolDaemon:
                         else:
                             self.send_openai_response("【态势感知】空调故障引发温度飙升并伴随漏水警告，已前置调整空调频率并将高负荷服务器任务进行了迁移恢复。")
                         return
-                        
+
                     if "安防与合规专家" in system_prompt:
                         has_sec = any(tc.get("function", {}).get("name") == "analyze_security" for m in messages if m.get("role") == "assistant" for tc in (m.get("tool_calls") or []))
                         if not has_sec:
@@ -755,7 +755,7 @@ class LocalProtocolDaemon:
                         else:
                             self.send_openai_response("【安全评估】近两小时门禁记录显示外部人员进入触发了安防告警，已执行安全巡检指令并升级监控。")
                         return
-                        
+
                     if "云原生与系统专家" in system_prompt:
                         if "SVR-003" in user_prompt or any("SVR-003" in m.get("content", "") for m in messages):
                             has_restart = any(tc.get("function", {}).get("name") == "restart_server" for m in messages if m.get("role") == "assistant" for tc in (m.get("tool_calls") or []))
@@ -778,7 +778,7 @@ class LocalProtocolDaemon:
                 self.send_header("Cache-Control", "no-cache")
                 self.send_header("Connection", "keep-alive")
                 self.end_headers()
-                
+
                 chunk = {
                     "choices": [
                         {
@@ -799,7 +799,7 @@ class LocalProtocolDaemon:
                 self.send_header("Cache-Control", "no-cache")
                 self.send_header("Connection", "keep-alive")
                 self.end_headers()
-                
+
                 chunk1 = {
                     "choices": [
                         {
@@ -812,7 +812,7 @@ class LocalProtocolDaemon:
                     ]
                 }
                 self.wfile.write(f"data: {json.dumps(chunk1, ensure_ascii=False)}\n\n".encode("utf-8"))
-                
+
                 chunk2 = {
                     "choices": [
                         {
@@ -851,7 +851,7 @@ class LocalProtocolDaemon:
                     ]
                 }
                 self.send_json(resp)
-                
+
             def send_openai_tool_call(self, tool_name: str, args_json_str: str):
                 if getattr(self, "req_stream", False):
                     self.send_openai_tool_call_stream(tool_name, args_json_str)
@@ -885,7 +885,7 @@ class LocalProtocolDaemon:
                 self.send_header("Content-Length", str(len(body)))
                 self.end_headers()
                 self.wfile.write(body)
-        
+
         httpd = HTTPServer((LOCAL_IP, HTTP_PORT), SimulatedHTTPHandler)
         while self.running:
             httpd.handle_request()
@@ -894,10 +894,10 @@ class LocalProtocolDaemon:
         racks = []
         for dc in self.state.get("datacenters", []):
             racks.extend(dc.get("racks", []))
-            
+
         rack = next((r for r in racks if r["id"] == chassis_id), None)
         temp = rack["temp_celsius"] if rack else 25.0
-        
+
         return {
             "Id": chassis_id,
             "Name": "Chassis Thermal Status",
@@ -915,11 +915,11 @@ class LocalProtocolDaemon:
         servers = []
         for dc in self.state.get("datacenters", []):
             servers.extend(dc.get("servers", []))
-            
+
         s = next((svr for svr in servers if svr["id"] == system_id), None)
         cpu = s["cpu_percent"] if s else 10.0
         mem = s["mem_percent"] if s else 20.0
-        
+
         return {
             "Id": system_id,
             "Name": s["hostname"] if s else "Physical Server Node",

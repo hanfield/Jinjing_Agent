@@ -9,7 +9,7 @@ import sys
 
 def get_harness_logger(name: str = "Harness") -> logging.Logger:
     logger = logging.getLogger(name)
-    
+
     if not logger.handlers:
         logger.setLevel(logging.INFO)
         handler = logging.StreamHandler(sys.stdout)
@@ -20,7 +20,7 @@ def get_harness_logger(name: str = "Harness") -> logging.Logger:
         )
         handler.setFormatter(formatter)
         logger.addHandler(handler)
-        
+
     return logger
 
 # 全局默认 logger

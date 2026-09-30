@@ -72,7 +72,7 @@ async def call_llm_to_inflate(case_text: str) -> dict:
     model = os.getenv("LLM_MODEL", "Qwen/QwQ-32B")
 
     prompt = PROMPT_TEMPLATE.format(case_text=case_text)
-    
+
     headers = {}
     if api_key:
         headers["Authorization"] = f"Bearer {api_key}"
@@ -100,7 +100,7 @@ async def call_llm_to_inflate(case_text: str) -> dict:
 async def main():
     input_file = "data/expert_input.md"
     output_file = "finetune/qwen_train.jsonl"
-    
+
     if not os.path.exists(input_file):
         print(f"❌ 找不到输入文件：{input_file}")
         return
@@ -110,9 +110,9 @@ async def main():
 
     # 按【案例XXX】切分
     cases = [c.strip() for c in content.split("【案例") if c.strip()]
-    
+
     print(f"🔍 找到了 {len(cases)} 个专家大白话案例，开始清洗和膨胀...")
-    
+
     out_f = open(output_file, "w", encoding="utf-8")
     success_count = 0
 
@@ -120,7 +120,7 @@ async def main():
         case_idx = case.split("】")[0]
         case_body = case.split("】")[1].strip() if "】" in case else case
         print(f"⏳ 正在处理案例 {case_idx}...")
-        
+
         result_json = await call_llm_to_inflate(case_body)
         if result_json:
             out_f.write(json.dumps(result_json, ensure_ascii=False) + "\n")

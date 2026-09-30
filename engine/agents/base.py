@@ -39,7 +39,7 @@ class BaseAgent:
         self.name = name
         self.system_prompt = system_prompt
         self.allowed_tools = allowed_tools or []
-        
+
         # 运行时状态机与内存隔离
         self.state: AgentState = AgentState.INITIALIZING
         self.memory: AgentMemory = AgentMemory(agent_id=agent_id)

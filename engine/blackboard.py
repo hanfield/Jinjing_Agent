@@ -35,13 +35,13 @@ class Blackboard:
     def __init__(self):
         self.session_id: str = "default-incident"
         self.status: str = "NORMAL"  # NORMAL / WARNING / CRITICAL / RESOLVED
-        
+
         # 核心状态空间
         self.environment_status: Dict[str, Any] = {}      # 动环状态，如机柜温度、UPS负载
         self.affected_hosts: List[str] = []               # 受影响的云原生主机列表
         self.security_locks: Dict[str, bool] = {}         # 安防与配电锁状态
         self.evidence_chain: List[EvidenceItem] = []      # 风险判定证据链集合
-        
+
         # 执行与调度锁
         self.active_worker: Optional[str] = None          # 当前正在执行的专家 Agent
         self.approval_pending: bool = False               # 是否有高危操作正在等待主管审批
@@ -84,7 +84,7 @@ class Blackboard:
         根据目标下游 Agent 的角色，按需提取精简黑板摘要，拒绝发送全量历史对话。
         """
         summary_lines = [f"### 📋 全局黑板状态总线摘要 (当前态势: {self.status})"]
-        
+
         if target_agent == "L2_Cloud":
             # 云原生专家仅需关注受影响的主机与底层物理诱因
             summary_lines.append("#### 🖥️ 云原生与主机态势订阅")
@@ -93,12 +93,12 @@ class Blackboard:
             infra_ev = [e for e in self.evidence_chain if e.source_agent == "L2_Infra"]
             for ev in infra_ev:
                 summary_lines.append(f"- ⚠️ [底层动环诱因]: 靶点 {ev.affected_target} 预计 {ev.ttf_minutes} 分钟内崩溃 ({ev.risk_summary})")
-                
+
         elif target_agent == "L2_Infra":
             # 动环专家关注环境热点与机柜功耗
             summary_lines.append("#### 🗄️ 动环与基础设施态势订阅")
             summary_lines.append(f"- 环境遥测快照: {json.dumps(self.environment_status, ensure_ascii=False)}")
-            
+
         elif target_agent == "L2_Sec":
             # 安防专家关注高危拦截与门禁配电锁
             summary_lines.append("#### 🔒 安防与合规态势订阅")

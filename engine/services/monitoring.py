@@ -20,10 +20,10 @@ def _load_data() -> dict:
         raw = global_daemon.state
     except Exception:
         raw = {}
-        
+
     import copy
     state_copy = copy.deepcopy(raw)
-    
+
     for dc in state_copy.get("datacenters", []):
         # 1. SNMP 协议读取 UPS 负载
         for ups in dc.get("ups", []):
@@ -35,7 +35,7 @@ def _load_data() -> dict:
                 ups["load_percent"] = int(load)
             if battery:
                 ups["battery_percent"] = int(battery)
-                
+
         # 2. Modbus/TCP 协议读取精密空调
         for hvac in dc.get("hvac", []):
             hvac_id = hvac["id"]
@@ -46,7 +46,7 @@ def _load_data() -> dict:
                 hvac["return_temp"] = float(regs[1]) / 10.0
                 hvac["fan_speed_hz"] = regs[2]
                 hvac["status"] = "正常" if regs[3] == 1 else "故障"
-                
+
         # 3. Redfish 协议读取服务器与机柜体征
         for rack in dc.get("racks", []):
             rack_id = rack["id"]
@@ -54,7 +54,7 @@ def _load_data() -> dict:
             if thermal and "Temperatures" in thermal:
                 rack["temp_celsius"] = thermal["Temperatures"][0]["ReadingCelsius"]
                 rack["status"] = "告警" if rack["temp_celsius"] > 30 else "正常"
-                
+
         for s in dc.get("servers", []):
             svr_id = s["id"]
             telemetry = redfish_client.get_system_telemetry(system_id=svr_id)
@@ -63,14 +63,14 @@ def _load_data() -> dict:
                 mem = telemetry["Oem"]["Telemetry"]["MemoryUtilizationPercent"]
                 s["cpu_percent"] = cpu
                 s["mem_percent"] = mem
-                
+
                 status = "正常"
                 if cpu > 90:
                     status = "CPU高负载告警"
                 elif mem > 90:
                     status = "内存超载告警"
                 s["status"] = status
-                
+
     return state_copy
 
 # ── 统一标准化告警模型 ─────────────────────────────────────

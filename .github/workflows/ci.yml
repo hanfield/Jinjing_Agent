@@ -1,0 +1,149 @@
+name: Jin-Shu OS CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - "release/**"
+  pull_request:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+    inputs:
+      run_eval:
+        description: "Run Agent Evaluation Harness Benchmark"
+        required: false
+        default: true
+        type: boolean
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ──────────────────────────────────────────────────────────────────────────
+  # 1. 静态代码质量与风格检查
+  # ──────────────────────────────────────────────────────────────────────────
+  lint:
+    name: Code Quality & Linting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install Linting Tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff
+
+      - name: Run Ruff Lint Checks
+        run: |
+          ruff check .
+
+      - name: Validate Python Syntax (compileall)
+        run: |
+          python -m compileall -q engine/ harness/ finetune/
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # 2. 多版本 Python 单元测试与拓扑图/情景记忆回归测试
+  # ──────────────────────────────────────────────────────────────────────────
+  unit-tests:
+    name: Unit Tests (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pytest pytest-asyncio
+
+      - name: Run Pytest Suite
+        run: |
+          pytest harness/tests/ -v --junitxml=junit-report-${{ matrix.python-version }}.xml
+
+      - name: Archive Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-python-${{ matrix.python-version }}
+          path: junit-report-${{ matrix.python-version }}.xml
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # 3. 智能体评测大盘流水线 (Harness Benchmark + SQLite Flywheel)
+  # ──────────────────────────────────────────────────────────────────────────
+  eval-harness:
+    name: Agent Evaluation Harness
+    needs: [lint, unit-tests]
+    runs-on: ubuntu-latest
+    if: github.event_name != 'workflow_dispatch' || inputs.run_eval == true
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install Runtime Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Execute Harness CLI Benchmark
+        run: |
+          python -m harness.cli --config harness/configs/default_eval.json
+
+      - name: Archive Flywheel SQLite & Evaluation Logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-flywheel-artifacts
+          path: |
+            finetune/flywheel.db
+            server.log
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # 4. 生产级 Docker 镜像构建验证
+  # ──────────────────────────────────────────────────────────────────────────
+  docker-build:
+    name: Docker Build Verification
+    needs: [lint, unit-tests]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: false
+          tags: jinshu-os:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

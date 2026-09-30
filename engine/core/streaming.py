@@ -30,7 +30,7 @@ class LangGraphOrchestrator:
         # 启动后台消息总线（保持兼容性）
         from engine.agents.bus import global_message_bus
         from ..blackboard import global_blackboard
-        
+
         await global_message_bus.start()
         global_blackboard.reset()  # 重置旧黑板单例以备后用
 

@@ -235,10 +235,10 @@ def scale_k8s_deployment(deployment_name: str, replicas: int, namespace: str = "
     # 2. 次优方案：如果配置了 KUBE_TOKEN，尝试使用 HTTP REST API 执行变更
     k8s_url = os.getenv("KUBERNETES_API_URL", "https://kubernetes.default.svc")
     k8s_token = os.getenv("KUBE_TOKEN", "")
-    
+
     if k8s_token:
         headers = {
-            "Authorization": f"Bearer {k8s_token}", 
+            "Authorization": f"Bearer {k8s_token}",
             "Accept": "application/json",
             "Content-Type": "application/strategic-merge-patch+json"
         }
@@ -291,7 +291,7 @@ def query_k8s_metrics(promql: str) -> str:
             instance = metric.get("instance") or metric.get("pod") or "unknown"
             lines.append(f"- {instance}: {val}")
         return "\n".join(lines)
-        
+
     # 如果客户端未返回，降级为模拟信息
     if "cpu" in promql.lower():
         return f"📊 [Prometheus Mock] 执行语句 `{promql}` 结果：\n- pay-service-pod-1: CPU 利用率 92% (过载)\n- order-service-pod-2: CPU 利用率 15%"
@@ -357,7 +357,7 @@ class MockServerFS:
     def __init__(self, server_id: str = "SVR-003"):
         self.server_id = server_id
         self.use_docker = False
-        
+
         import subprocess
         try:
             res = subprocess.run(["docker", "info"], capture_output=True, timeout=2)

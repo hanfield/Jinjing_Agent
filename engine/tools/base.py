@@ -264,7 +264,7 @@ def get_dc_data() -> dict:
         raw = global_daemon.state
     except Exception:
         raw = {}
-        
+
     flat = {
         "racks": [],
         "ups": [],
@@ -274,7 +274,7 @@ def get_dc_data() -> dict:
         "history_metrics": raw.get("history_metrics", {}),
         "network_traffic": raw.get("network_traffic", []),
     }
-    
+
     # 1. 物理设施层 - SNMP 协议读取 UPS 负载
     for dc in raw.get("datacenters", []):
         for ups in dc.get("ups", []):
@@ -282,7 +282,7 @@ def get_dc_data() -> dict:
             unit = 1 if "01" in ups_id else 2
             load = snmp_client.get_oid(f"1.3.6.1.4.1.9.9.ups.{unit}.load")
             battery = snmp_client.get_oid(f"1.3.6.1.4.1.9.9.ups.{unit}.battery")
-            
+
             flat["ups"].append({
                 "id": ups_id,
                 "zone": ups["zone"],
@@ -290,7 +290,7 @@ def get_dc_data() -> dict:
                 "battery_percent": int(battery) if battery else ups["battery_percent"],
                 "output_kva": ups["output_kva"]
             })
-            
+
     # 2. 物理设施层 - Modbus/TCP 协议读取精密空调 HVAC
     for dc in raw.get("datacenters", []):
         for hvac in dc.get("hvac", []):
@@ -307,7 +307,7 @@ def get_dc_data() -> dict:
                 ret = hvac["return_temp"]
                 speed = hvac["fan_speed_hz"]
                 status = hvac["status"]
-                
+
             flat["hvac"].append({
                 "id": hvac_id,
                 "zone": hvac["zone"],
@@ -326,7 +326,7 @@ def get_dc_data() -> dict:
             temp = rack["temp_celsius"]
             if thermal and "Temperatures" in thermal:
                 temp = thermal["Temperatures"][0]["ReadingCelsius"]
-                
+
             flat["racks"].append({
                 "id": rack_id,
                 "zone": rack["zone"],
@@ -336,7 +336,7 @@ def get_dc_data() -> dict:
                 "temp_celsius": temp,
                 "status": "告警" if temp > 30 else "正常"
             })
-            
+
         # 3.2 物理服务器
         for s in dc.get("servers", []):
             svr_id = s["id"]
@@ -347,13 +347,13 @@ def get_dc_data() -> dict:
             else:
                 cpu = s["cpu_percent"]
                 mem = s["mem_percent"]
-                
+
             status = "正常"
             if cpu > 90:
                 status = "CPU高负载告警"
             elif mem > 90:
                 status = "内存超载告警"
-                
+
             flat["servers"].append({
                 "id": svr_id,
                 "hostname": s["hostname"],

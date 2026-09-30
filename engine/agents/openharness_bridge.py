@@ -164,7 +164,7 @@ class JinShuToolAdapter(BaseTool):
                 result = await fn(**kwargs)
             else:
                 result = await asyncio.get_event_loop().run_in_executor(None, lambda: fn(**kwargs))
-            
+
             res_str = str(result)
             # 动态上下文压缩保护：阈值 3500 字符
             if len(res_str) > 3500:
@@ -331,7 +331,7 @@ async def run_oh_worker(
                     if hasattr(block, "text"):
                         turn_text += block.text
                 final_text += turn_text
-                
+
                 # 若底层推理模型输出了思维链内容，单独发射结构化 reasoning 事件
                 raw_reasoning = getattr(event.message, "_reasoning", None)
                 if raw_reasoning:

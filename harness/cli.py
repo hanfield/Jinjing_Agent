@@ -8,7 +8,6 @@
 import os
 import argparse
 import asyncio
-import json
 from typing import Dict, Any
 from dotenv import load_dotenv
 
@@ -30,7 +29,7 @@ async def run_harness_cli(config_path: str, task_id: str = None) -> Dict[str, An
     evaluator = MetricsEngine()
 
     logger.info("=" * 70)
-    logger.info(f"🚀 金枢 2.0 (Jin-Shu OS) - 工业级智能体评测大盘 (Harness CLI)")
+    logger.info("🚀 金枢 2.0 (Jin-Shu OS) - 工业级智能体评测大盘 (Harness CLI)")
     logger.info(f"   - 测试套件: {registry.suite_metadata.get('suite_name')} (v{registry.suite_metadata.get('version')})")
     logger.info(f"   - 套件描述: {registry.suite_metadata.get('description')}")
     logger.info("=" * 70)
@@ -42,10 +41,10 @@ async def run_harness_cli(config_path: str, task_id: str = None) -> Dict[str, An
 
 
     overall_results = []
-    
+
     # 1. 创建企业级评测批次 (Run ID)
     run_id = evaluator.create_run(registry.suite_metadata.get("suite_name"))
-    
+
     w_eng = registry.suite_metadata.get("weight_eng", 0.6)
     w_judge = registry.suite_metadata.get("weight_judge", 0.4)
 
@@ -74,7 +73,7 @@ async def run_harness_cli(config_path: str, task_id: str = None) -> Dict[str, An
 
 
         evaluator.persist_flywheel(run_id, task, exec_result, passed, final_score, eng_metrics, judge_metrics)
-        
+
         overall_results.append({
             "task_id": task.task_id, "passed": passed, "final_score": final_score,
             "metrics": {**eng_metrics, **judge_metrics}

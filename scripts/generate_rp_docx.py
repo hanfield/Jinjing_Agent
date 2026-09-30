@@ -2,9 +2,9 @@ import os
 import docx
 from docx.shared import Inches, Pt, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.enum.table import WD_TABLE_ALIGNMENT, WD_ALIGN_VERTICAL
-from docx.oxml import OxmlElement, parse_xml
-from docx.oxml.ns import nsdecls, qn
+from docx.enum.table import WD_TABLE_ALIGNMENT
+from docx.oxml import parse_xml
+from docx.oxml.ns import nsdecls
 
 def set_cell_background(cell, hex_color):
     """Set the background color of a table cell."""
@@ -26,7 +26,7 @@ def set_table_borders(table, color="CCCCCC", sz="4", val="single"):
 
 def build_research_proposal():
     doc = docx.Document()
-    
+
     # Page Setup: Standard A4, 1-inch margins
     sections = doc.sections
     for section in sections:
@@ -36,13 +36,12 @@ def build_research_proposal():
         section.right_margin = Inches(1.0)
         section.page_width = Inches(8.27)
         section.page_height = Inches(11.69)
-        
+
     # Styles definition
     COLOR_PRIMARY = RGBColor(26, 54, 93)      # Deep Navy #1A365D
     COLOR_SECONDARY = RGBColor(43, 108, 176)  # Slate Blue #2B6CB0
     COLOR_TEXT = RGBColor(45, 55, 72)         # Dark Gray #2D3748
-    COLOR_MUTED = RGBColor(113, 128, 150)     # Muted #718096
-    
+
     # Base Normal Style
     normal_style = doc.styles['Normal']
     normal_style.font.name = 'Calibri'
@@ -74,39 +73,39 @@ def build_research_proposal():
     meta_table = doc.add_table(rows=4, cols=2)
     meta_table.alignment = WD_TABLE_ALIGNMENT.CENTER
     meta_table.autofit = False
-    
+
     meta_data = [
         ("Target Degree:", "Ph.D. / M.Sc. by Research in Computer Science"),
         ("Target Supervisor:", "Professor Gregory O'Hare (Head of School, Professor of Artificial Intelligence)"),
         ("Target Institution:", "School of Computer Science and Statistics, Trinity College Dublin (TCD)"),
         ("Applicant:", "Li Han (M.Sc. NTU GPA 4.0/5.0, B.Sc. First Class Honours QMUL)")
     ]
-    
+
     for idx, (k, v) in enumerate(meta_data):
         row = meta_table.rows[idx]
         row.cells[0].width = Inches(1.8)
         row.cells[1].width = Inches(4.5)
-        
+
         pk = row.cells[0].paragraphs[0]
         pk.paragraph_format.space_after = Pt(2)
         rk = pk.add_run(k)
         rk.font.bold = True
         rk.font.size = Pt(9.5)
         rk.font.color.rgb = COLOR_PRIMARY
-        
+
         pv = row.cells[1].paragraphs[0]
         pv.paragraph_format.space_after = Pt(2)
         rv = pv.add_run(v)
         rv.font.size = Pt(9.5)
         rv.font.color.rgb = COLOR_TEXT
-        
+
         set_cell_background(row.cells[0], "F7FAFC")
         set_cell_background(row.cells[1], "F7FAFC")
         set_cell_margins(row.cells[0], top=60, bottom=60, left=100, right=100)
         set_cell_margins(row.cells[1], top=60, bottom=60, left=100, right=100)
 
     set_table_borders(meta_table, color="CBD5E0", sz="4")
-    
+
     doc.add_paragraph().paragraph_format.space_after = Pt(8)
 
     def add_section_heading(title_text):
@@ -118,7 +117,7 @@ def build_research_proposal():
         run.font.size = Pt(13)
         run.font.bold = True
         run.font.color.rgb = COLOR_PRIMARY
-        
+
         # Bottom divider border under heading
         pBdr = parse_xml(f'<w:pBdr {nsdecls("w")}><w:bottom w:val="single" w:sz="6" w:space="2" w:color="2B6CB0"/></w:pBdr>')
         p._p.get_or_add_pPr().append(pBdr)
@@ -178,35 +177,35 @@ def build_research_proposal():
 
     # 3. Research Questions & Objectives
     add_section_heading("3. Research Questions & Core Objectives")
-    
+
     rq_table = doc.add_table(rows=3, cols=2)
     rq_table.alignment = WD_TABLE_ALIGNMENT.CENTER
     rq_table.autofit = False
-    
+
     rqs = [
         ("RQ1: Decentralized State Governance", "How can we architect an asynchronous multi-agent coordination protocol that minimizes message complexity and context degradation while correlating high-frequency physical telemetry with distributed workload traces?"),
         ("RQ2: Deterministic Safety & Guardrails", "How can we establish formal AST-level parameter validation and cryptographic approval gates within the Model Context Protocol (MCP) to mathematically eliminate tool hallucination and prevent unauthorized mutations on critical physical assets?"),
         ("RQ3: Closed-Loop Evolution via DPO Flywheel", "How can automated chaos simulation sandboxes and execution telemetry be harnessed to curate contrastive DPO datasets that continuously optimize compact domain models for zero-shot operational precision?")
     ]
-    
+
     for idx, (title, desc) in enumerate(rqs):
         row = rq_table.rows[idx]
         row.cells[0].width = Inches(2.2)
         row.cells[1].width = Inches(4.1)
-        
+
         p0 = row.cells[0].paragraphs[0]
         p0.paragraph_format.space_after = Pt(2)
         r0 = p0.add_run(title)
         r0.bold = True
         r0.font.size = Pt(9.5)
         r0.font.color.rgb = COLOR_PRIMARY
-        
+
         p1 = row.cells[1].paragraphs[0]
         p1.paragraph_format.space_after = Pt(2)
         r1 = p1.add_run(desc)
         r1.font.size = Pt(9.5)
         r1.font.color.rgb = COLOR_TEXT
-        
+
         bg = "F7FAFC" if idx % 2 == 0 else "EDF2F7"
         set_cell_background(row.cells[0], bg)
         set_cell_background(row.cells[1], bg)
@@ -251,11 +250,11 @@ def build_research_proposal():
 
     # 5. Work Plan Table
     add_section_heading("5. 4-Year PhD Work Plan & Milestones")
-    
+
     plan_table = doc.add_table(rows=5, cols=3)
     plan_table.alignment = WD_TABLE_ALIGNMENT.CENTER
     plan_table.autofit = False
-    
+
     headers = ["Timeline", "Core Research Focus & Milestones", "Key Deliverables & Target Publications"]
     hdr_row = plan_table.rows[0]
     for i, h in enumerate(headers):
@@ -280,14 +279,14 @@ def build_research_proposal():
         row.cells[0].width = Inches(1.1)
         row.cells[1].width = Inches(2.9)
         row.cells[2].width = Inches(2.3)
-        
+
         row.cells[0].paragraphs[0].add_run(time_col).bold = True
         row.cells[0].paragraphs[0].runs[0].font.size = Pt(9)
         row.cells[0].paragraphs[0].runs[0].font.color.rgb = COLOR_PRIMARY
-        
+
         row.cells[1].paragraphs[0].add_run(focus_col).font.size = Pt(9)
         row.cells[2].paragraphs[0].add_run(deliv_col).font.size = Pt(9)
-        
+
         bg = "FFFFFF" if idx % 2 != 0 else "F7FAFC"
         set_cell_background(row.cells[0], bg)
         set_cell_background(row.cells[1], bg)
@@ -329,7 +328,7 @@ def build_research_proposal():
     os.makedirs(output_dir, exist_ok=True)
     out_path = os.path.join(output_dir, "Research_Proposal_Li_Han_TCD.docx")
     doc.save(out_path)
-    
+
     # Also save to root for easy access
     doc.save("/Users/hanli/Downloads/Jinjing_Agent/Research_Proposal_Li_Han_TCD.docx")
     print(f"Successfully generated Word RP at: {out_path}")

@@ -9,7 +9,7 @@ import os
 import json
 import urllib.request
 from typing import List, Dict, Any, Optional
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 
 @dataclass
@@ -35,7 +35,7 @@ class BenchmarkTask:
         """优先从 snapshot_uri 拉取真实状态进行水合，否则回退到 mock_env_state"""
         if not self.snapshot_uri:
             return self.mock_env_state
-        
+
         try:
             # 如果是本地文件系统快照
             if self.snapshot_uri.startswith("file://") or self.snapshot_uri.startswith("/"):
@@ -50,7 +50,7 @@ class BenchmarkTask:
                     return json.loads(response.read().decode('utf-8'))
         except Exception as e:
             print(f"⚠️ [Data Hydration] 无法拉取快照 {self.snapshot_uri}: {e}。退回 mock_env_state。")
-        
+
         return self.mock_env_state
 
 
@@ -67,10 +67,10 @@ class TaskRegistry:
         """加载配置文件中的评测用例"""
         if not os.path.exists(config_path):
             raise FileNotFoundError(f"配置文件未找到: {config_path}")
-            
+
         with open(config_path, "r", encoding="utf-8") as f:
             data = json.load(f)
-            
+
         self.suite_metadata = {
             "suite_name": data.get("suite_name", "Unknown_Suite"),
             "version": data.get("version", "1.0.0"),

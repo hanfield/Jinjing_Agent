@@ -26,7 +26,7 @@ async def summarizer_node(state: JinShuState) -> dict:
     汇聚专家推演结论，生成高管汇报。
     """
     user_message = state["user_message"]
-    
+
     # 构造类似于原 Blackboard 导出的快照
     blackboard_snapshot = {
         "status": state.get("overall_status", "NORMAL"),
@@ -49,7 +49,7 @@ async def summarizer_node(state: JinShuState) -> dict:
 
     events = []
     events.append({"event": "start_thinking", "expert": "L1_Supervisor"})
-    
+
     try:
         payload = {
             "model": _MODEL,
@@ -59,7 +59,7 @@ async def summarizer_node(state: JinShuState) -> dict:
             ],
             "temperature": 0.1
         }
-        
+
         async with httpx.AsyncClient(timeout=45.0) as client:
             headers = {"Authorization": f"Bearer {_API_KEY}"} if _API_KEY else {}
             resp = await client.post(f"{_BASE_URL}/chat/completions", headers=headers, json=payload)

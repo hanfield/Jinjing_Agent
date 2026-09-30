@@ -6,9 +6,23 @@
 实现零改动替换 main_v2.py 中的 engine 引用。
 """
 
-from .streaming import LangGraphOrchestrator
+from typing import TYPE_CHECKING
 
-# 全局单例 —— 与原 multi_agent_orchestrator 接口完全兼容
-multi_agent_orchestrator = LangGraphOrchestrator()
+if TYPE_CHECKING:
+    from .streaming import LangGraphOrchestrator
+
+_orchestrator = None
+
+def __getattr__(name: str):
+    global _orchestrator
+    if name == "LangGraphOrchestrator":
+        from .streaming import LangGraphOrchestrator
+        return LangGraphOrchestrator
+    elif name == "multi_agent_orchestrator":
+        if _orchestrator is None:
+            from .streaming import LangGraphOrchestrator
+            _orchestrator = LangGraphOrchestrator()
+        return _orchestrator
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 __all__ = ["multi_agent_orchestrator", "LangGraphOrchestrator"]

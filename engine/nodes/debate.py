@@ -13,7 +13,6 @@ import os
 import json
 import re
 import httpx
-from typing import Dict, Any, List
 
 from engine.core.state import JinShuState
 
@@ -89,15 +88,18 @@ async def debate_consensus_node(state: JinShuState) -> dict:
             )
             resp.raise_for_status()
             content = resp.json()["choices"][0]["message"]["content"].strip()
-            
+
             # 清理思维链标签
             content = re.sub(r"<think>[\s\S]*?</think>", "", content).strip()
-            if content.startswith("```json"): content = content[7:]
-            if content.startswith("```"): content = content[3:]
-            if content.endswith("```"): content = content[:-3]
-            
+            if content.startswith("```json"):
+                content = content[7:]
+            if content.startswith("```"):
+                content = content[3:]
+            if content.endswith("```"):
+                content = content[:-3]
+
             parsed = json.loads(content.strip())
-            
+
             # 发射辩论流式事件，供前端渲染实时对抗
             events.append({
                 "event": "debate_turn",
@@ -114,9 +116,9 @@ async def debate_consensus_node(state: JinShuState) -> dict:
                 "expert": "Consensus_Engine",
                 "text": f"🤝 [专委会达成共识方案]: {parsed.get('consensus_solution', '')}"
             })
-            
+
             consensus_solution = parsed.get("consensus_solution", "")
-            
+
     except Exception as e:
         consensus_solution = f"多专家自动协商降级：优先保障生产连续性与 SLA，协同微调动环策略 ({e})"
         events.append({

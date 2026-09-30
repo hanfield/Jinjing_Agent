@@ -8,7 +8,6 @@
 import os
 import json
 import sqlite3
-import asyncio
 from typing import Dict, Any
 import httpx
 from harness.tasks.task_registry import BenchmarkTask
@@ -21,7 +20,7 @@ class MetricsEngine:
         self.api_key = os.getenv("OPENAI_API_KEY", "").strip()
         self.base_url = os.getenv("OPENAI_BASE_URL", "https://api.deepseek.com/v1")
         self.model = os.getenv("LLM_MODEL", "Qwen/QwQ-32B")
-        
+
         headers = {"Authorization": f"Bearer {self.api_key}"} if self.api_key else {}
         headers["Connection"] = "close"
         self._client = httpx.AsyncClient(base_url=self.base_url, headers=headers, timeout=60.0)
@@ -35,14 +34,14 @@ class MetricsEngine:
         os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
         self.conn = sqlite3.connect(self.db_path)
         cursor = self.conn.cursor()
-        
+
         # harness_runs: 记录 CI 批次
         cursor.execute('''CREATE TABLE IF NOT EXISTS harness_runs (
                             run_id INTEGER PRIMARY KEY AUTOINCREMENT,
                             suite_name TEXT,
                             timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
                         )''')
-                        
+
         # task_results: 单任务执行结果
         cursor.execute('''CREATE TABLE IF NOT EXISTS task_results (
                             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -54,7 +53,7 @@ class MetricsEngine:
                             judge_comment TEXT,
                             final_solution TEXT
                         )''')
-                        
+
         # tool_traces: 存储完整的工具调用轨迹以用于 SFT
         cursor.execute('''CREATE TABLE IF NOT EXISTS tool_traces (
                             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -75,7 +74,7 @@ class MetricsEngine:
     def evaluate_engineering_metrics(self, task: BenchmarkTask, exec_result: Dict[str, Any], weight: float = 0.6) -> Dict[str, Any]:
         """计算硬工程指标"""
         golden = task.golden_metrics
-        
+
         tools_set = set(exec_result["executed_tools"])
         expected_tools_set = set(golden.expected_tools)
         tool_recall = len(tools_set & expected_tools_set) / max(1, len(expected_tools_set))
@@ -119,15 +118,18 @@ class MetricsEngine:
         try:
             resp = await self._client.post("/chat/completions", json={"model": self.model, "messages": [{"role": "system", "content": prompt}], "temperature": 0.1})
             content = resp.json()["choices"][0]["message"]["content"].strip()
-            
+
             # 清理推理模型的 <think>...</think> 块
             import re
             content = re.sub(r"<think>[\s\S]*?</think>", "", content).strip()
-            
-            if content.startswith("```json"): content = content[7:]
-            if content.startswith("```"): content = content[3:]
-            if content.endswith("```"): content = content[:-3]
-            
+
+            if content.startswith("```json"):
+                content = content[7:]
+            if content.startswith("```"):
+                content = content[3:]
+            if content.endswith("```"):
+                content = content[:-3]
+
             content = content.strip()
             try:
                 return json.loads(content)
@@ -148,13 +150,13 @@ class MetricsEngine:
     def persist_flywheel(self, run_id: int, task: BenchmarkTask, exec_result: Dict[str, Any], passed: bool, final_score: float, eng_metrics: dict, judge_metrics: dict):
         """企业级 SQLite 数据飞轮持久化"""
         cursor = self.conn.cursor()
-        
+
         # 1. 保存 Task Result
         cursor.execute(
             "INSERT INTO task_results (run_id, task_id, passed, final_score, ttft_ms, judge_comment, final_solution) VALUES (?, ?, ?, ?, ?, ?, ?)",
             (run_id, task.task_id, passed, final_score, eng_metrics["ttft_ms"], judge_metrics["judge_comment"], exec_result["final_solution"])
         )
-        
+
         # 2. 保存 Tool Traces (如果包含了 span_traces 或 intercepted_tool_calls)
         traces = exec_result.get("span_traces", [])
         for trace in traces:
@@ -162,7 +164,7 @@ class MetricsEngine:
                 "INSERT INTO tool_traces (task_id, tool_name, args, expert_id) VALUES (?, ?, ?, ?)",
                 (task.task_id, trace.get("tool_name"), json.dumps(trace.get("args", {})), trace.get("agent_id"))
             )
-            
+
         self.conn.commit()
         print(f"\n📁 [数据飞轮] 评测任务 {task.task_id} 已结构化入库 SQLite。{'✅ 达标' if passed else '⚠️ 需修正'}")
 

@@ -24,7 +24,7 @@ def run_mlx_finetune():
     current_dir = os.path.dirname(os.path.abspath(__file__))
     source_data = os.path.join(current_dir, "train_data.jsonl")
     target_data = os.path.join(current_dir, "train.jsonl")
-    
+
     if os.path.exists(source_data):
         import shutil
         shutil.copy2(source_data, target_data)
@@ -47,7 +47,7 @@ def run_mlx_finetune():
 
     print(f"📦 目标基座模型：{model_name}")
     print(f"⚙️ 参数调优档案：Batch={batch_size} | Iters={iters} | LoRA-L={lora_layers}")
-    print(f"🚀 基于硬件探测：此脚本将深度调用 Apple 金属神经引擎 (Metal) 并分配动态高带宽显存。")
+    print("🚀 基于硬件探测：此脚本将深度调用 Apple 金属神经引擎 (Metal) 并分配动态高带宽显存。")
 
     mlx_command = [
         "python3", "-m", "mlx_lm.lora",

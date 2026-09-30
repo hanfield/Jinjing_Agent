@@ -36,12 +36,12 @@ def extract_qa_from_report(report_text: str) -> list:
         return []
 
     print(f"🔄 正在调用大模型 ({MODEL}) 审阅分析报告，请稍候...")
-    
+
     headers = {
         "Authorization": f"Bearer {API_KEY}",
         "Content-Type": "application/json"
     }
-    
+
     payload = {
         "model": MODEL,
         "messages": [
@@ -56,10 +56,10 @@ def extract_qa_from_report(report_text: str) -> list:
         with httpx.Client(timeout=180.0) as client:
             response = client.post(f"{BASE_URL}/chat/completions", headers=headers, json=payload)
             response.raise_for_status()
-            
+
         result = response.json()
         content = result["choices"][0]["message"]["content"].strip()
-        
+
         # 简单清洗防漏：如果大模型自作主张加了 ```json 包装，将其剥离
         if content.startswith("```json"):
             content = content[7:]
@@ -67,18 +67,18 @@ def extract_qa_from_report(report_text: str) -> list:
             content = content[3:]
         if content.endswith("```"):
             content = content[:-3]
-            
+
         data = json.loads(content.strip())
         if isinstance(data, dict) and "data" in data:
             data = data["data"]
-            
+
         return data if isinstance(data, list) else [data]
-        
+
     except Exception as e:
         print(f"❌ 大模型解析失败或格式错误: {e}")
         try:
             print("模型原始返回内容截断预览:", content[:200])
-        except:
+        except Exception:
             pass
         return []
 
@@ -87,7 +87,7 @@ def main():
     project_root = os.path.dirname(os.path.dirname(__file__))
     report_path = os.path.join(project_root, "data", "raw_report.txt")
     output_jsonl = os.path.join(project_root, "finetune", "train_data.jsonl")
-    
+
     # 1. 检查有没有现成的报告，如果没有，自动建一个示范用的故障报告
     if not os.path.exists(report_path):
         with open(report_path, "w", encoding="utf-8") as f:
@@ -96,20 +96,20 @@ def main():
             f.write("教训惨痛。正确做法应该是：一旦发生积水告警，第一步，必须立即切断该漏水区域地板下层配电箱的总闸，从物理上切断漏电起火隐患；")
             f.write("第二步，顺藤摸瓜查找上游的精密空调给水阀门或供水干管阀门并立刻将其彻底关闭；第三步，在确认电路无风险、漏水已阻断后，再去缓慢处理和抢救受潮的服务器等 IT 设备。")
         print(f"ℹ️ 未找到 {report_path} 文件。已自动为您生成一份【测试漏水事故复盘报告】用作演示。")
-        
+
     # 2. 读取非结构化原始文档
     with open(report_path, "r", encoding="utf-8") as f:
         report_text = f.read()
-        
+
     # 3. 呼叫大模型干活，从中“提取知识金矿”
     qa_list = extract_qa_from_report(report_text)
-    
+
     # 4. 把大模型生成的纯净数据，追加写入我们的微调训练集
     if qa_list:
         with open(output_jsonl, "a", encoding="utf-8") as f:
             for qa in qa_list:
                 f.write(json.dumps(qa, ensure_ascii=False) + "\n")
-                
+
         print(f"\n✅ 成功！大模型从一篇生涩的报告中提纯了 {len(qa_list)} 条精炼的处置方案。")
         print(f"📁 数据已自动追加到微调文件: {output_jsonl}")
         print("\n--- 提取成果速览 ---")

@@ -30,9 +30,9 @@ try:
         AutoTokenizer,
         TrainingArguments,
     )
-    from peft import LoraConfig, get_peft_model, TaskType
+    from peft import LoraConfig, TaskType
     from datasets import Dataset
-    from trl import SFTTrainer, DPOTrainer, RewardTrainer, PPOTrainer
+    from trl import SFTTrainer, DPOTrainer, RewardTrainer
     HAS_GPU_DEPS = True
 except ImportError:
     HAS_GPU_DEPS = False
@@ -57,7 +57,7 @@ def load_model_and_tokenizer(base_model: str, use_4bit: bool = True, is_reward_m
         "torch_dtype": torch.bfloat16,
         "attn_implementation": "flash_attention_2",
     }
-    
+
     # 当使用 DeepSpeed 时，通常由 DS 分配 device，故不强制设 device_map="auto"
     # 除非单卡运行才使用 auto
     if "LOCAL_RANK" not in os.environ:
@@ -74,7 +74,7 @@ def load_model_and_tokenizer(base_model: str, use_4bit: bool = True, is_reward_m
         model = AutoModelForSequenceClassification.from_pretrained(base_model, num_labels=1, **model_kwargs)
     else:
         model = AutoModelForCausalLM.from_pretrained(base_model, **model_kwargs)
-        
+
     model.config.use_cache = False
     return model, tokenizer
 
@@ -89,7 +89,7 @@ def get_lora_config(r=32, alpha=64, task_type=TaskType.CAUSAL_LM):
         r=r,
         lora_alpha=alpha,
         lora_dropout=0.05,
-        target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"], 
+        target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],
         bias="none",
     )
 
@@ -102,7 +102,7 @@ def train_sft(args):
     """第一阶段：使用 SFTTrainer 注入垂直领域（数据中心运维）知识"""
     print("\n" + "=" * 50 + "\n🚀 启动 Phase 1: SFT 监督微调\n" + "=" * 50)
     model, tokenizer = load_model_and_tokenizer(args.base_model, args.use_4bit)
-    
+
     # 构建适合 SFT 的格式化文本 (原生支持长思维链 <think> 结构)
     raw_data = []
     with open(args.data_path, "r", encoding="utf-8") as f:
@@ -110,7 +110,7 @@ def train_sft(args):
             if line.strip():
                 sample = json.loads(line)
                 user_msg = f"{sample['instruction']}\n\n{sample.get('input', '')}".strip()
-                
+
                 # 如果样本带有隐式思考推演过程，按 DeepSeek/QwQ 原生协议拼装 <think>
                 thought_str = sample.get("thought") or sample.get("thinking") or sample.get("reasoning_content")
                 if thought_str:
@@ -124,9 +124,9 @@ def train_sft(args):
                     f"<|im_start|>assistant\n{assistant_content}<|im_end>"
                 )
                 raw_data.append({"text": text})
-                
+
     dataset = Dataset.from_list(raw_data)
-    
+
     training_args = TrainingArguments(
         output_dir=os.path.join(args.output_dir, "sft"),
         per_device_train_batch_size=args.batch_size,
@@ -148,7 +148,7 @@ def train_sft(args):
         tokenizer=tokenizer,
         args=training_args,
     )
-    
+
     trainer.train()
     trainer.model.save_pretrained(os.path.join(args.output_dir, "sft_final"))
     tokenizer.save_pretrained(os.path.join(args.output_dir, "sft_final"))
@@ -164,7 +164,7 @@ def train_rlhf_reward(args):
     print("\n" + "=" * 50 + "\n🚀 启动 Phase 2(A): RLHF 奖励模型训练\n" + "=" * 50)
     # 奖励模型是一个序列分类模型，输出评分
     model, tokenizer = load_model_and_tokenizer(args.base_model, args.use_4bit, is_reward_model=True)
-    
+
     # 奖励模型需要 chosen (好回复) 和 rejected (坏回复)
     # 假定数据为: {"prompt": "...", "chosen": "好的建议...", "rejected": "危险的建议..."}
     dataset = Dataset.from_json(args.dpo_data_path)
@@ -186,7 +186,7 @@ def train_rlhf_reward(args):
         peft_config=get_lora_config(task_type=TaskType.SEQ_CLS),
         args=training_args,
     )
-    
+
     trainer.train()
     trainer.model.save_pretrained(os.path.join(args.output_dir, "rm_final"))
     print("✅ Reward Model 训练完成！")
@@ -211,15 +211,15 @@ def train_dpo(args):
     极大地节约了显存和训练时间。
     """
     print("\n" + "=" * 50 + "\n🚀 启动 Phase 3: DPO 直接偏好优化\n" + "=" * 50)
-    
+
     # DPO 需要基于 SFT 后的模型进行
     sft_model_path = os.path.join(args.output_dir, "sft_final")
     if not os.path.exists(sft_model_path):
         print(f"⚠️ 找不到 SFT 模型 ({sft_model_path})，回退使用基座模型。")
         sft_model_path = args.base_model
-        
+
     model, tokenizer = load_model_and_tokenizer(sft_model_path, args.use_4bit)
-    
+
     # DPO 数据格式要求：prompt, chosen, rejected
     # 示例：
     # prompt: "重启服务器命令是什么？"
@@ -248,7 +248,7 @@ def train_dpo(args):
         tokenizer=tokenizer,
         max_length=args.max_seq_length,
     )
-    
+
     trainer.train()
     trainer.model.save_pretrained(os.path.join(args.output_dir, "dpo_final"))
     tokenizer.save_pretrained(os.path.join(args.output_dir, "dpo_final"))
@@ -272,7 +272,7 @@ if __name__ == "__main__":
     parser.add_argument("--max_seq_length", type=int, default=8192, help="长文本最大长度，确保思维链不被截断")
     parser.add_argument("--use_4bit", action="store_true", default=False, help="H100 显存充足，建议关闭 4bit 走全 bf16")
     parser.add_argument("--deepspeed", type=str, default="finetune/ds_config.json", help="DeepSpeed 配置文件路径")
-    
+
     args = parser.parse_args()
 
     if not HAS_GPU_DEPS:

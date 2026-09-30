@@ -37,7 +37,7 @@ class SandboxProxyHarness:
         self.intercepted_tool_calls = []
         self.chaos_config = chaos_config or {}
         global_blackboard.reset()
-        
+
         # 将真实状态映射入黑板（兼容老逻辑）
         for rack_id, metrics in self.active_state.get("racks", {}).items():
             global_blackboard.update_environment(
@@ -98,17 +98,17 @@ class SandboxProxyHarness:
         """模拟真实的外部 API 调用，包含拦截与混沌注入"""
         # 记录调用轨迹
         self.record_tool_call(agent_id, tool_name, args)
-        
+
         # 1. 混沌注入：模拟延迟 (Latency Jitter)
         jitter_ms = self.chaos_config.get("latency_jitter_ms", 0)
         if jitter_ms > 0:
             await asyncio.sleep(jitter_ms / 1000.0)
-            
+
         # 2. 混沌注入：模拟失败 (503 Service Unavailable)
         failure_rate = self.chaos_config.get("inject_503_probability", 0.0)
         if failure_rate > 0 and random.random() < failure_rate:
             raise Exception(f"[Sandbox Chaos] 503 Service Unavailable for tool {tool_name}")
-            
+
         # 3. 交互式状态转移靶场逻辑 (Interactive State Transition Engine)
         if tool_name == "fingerprint_early_warning":
             rack_info = self.active_state.get("racks", {}).get("RACK-A02", {})
@@ -149,18 +149,18 @@ class SandboxProxyHarness:
             target = args.get("server_id")
             if not target:
                 raise ValueError("Missing required argument: server_id")
-            
+
             # 仿真状态转移：重启主机后，局部热量释放降载，服务进入健康就绪
             if "servers" in self.active_state and target in self.active_state["servers"]:
                 self.active_state["servers"][target]["status"] = "REBOOTED_HEALTHY"
                 self.active_state["servers"][target]["cpu_load"] = 0.05
-            
+
             return {
                 "status": "success",
                 "message": f"Server {target} reboot sequence initiated successfully. Quorum preserved.",
                 "post_state": "HEALTHY_ACTIVE"
             }
-        
+
         # 默认回落
         return {"status": "executed", "mocked": True}
 

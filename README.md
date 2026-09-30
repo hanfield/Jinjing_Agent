@@ -3,6 +3,7 @@
 
 [![Python Version](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.100%2B-009688.svg)](https://fastapi.tiangolo.com)
+[![CI/CD Pipeline](https://github.com/hanfield/Jinjing_Agent/actions/workflows/ci.yml/badge.svg)](https://github.com/hanfield/Jinjing_Agent/actions/workflows/ci.yml)
 [![Architecture](https://img.shields.io/badge/Topology-Star--Multi--Agent-orange.svg)](#architecture)
 [![Evaluation](https://img.shields.io/badge/Harness-Dual--Core%20Evaluator-brightgreen.svg)](#enterprise-evaluation-harness)
 [![Data Flywheel](https://img.shields.io/badge/Flywheel-SFT%20%26%20DPO-purple.svg)](#data-flywheel--continuous-learning)
@@ -212,6 +213,26 @@ python finetune/train_lora.py
 # Or on Apple Silicon:
 python finetune/train_mlx_lora.py
 ```
+
+---
+
+## 🔄 CI/CD & Automated Evaluation Pipeline
+
+Jin-Shu OS includes an enterprise-grade automated CI/CD pipeline running on GitHub Actions (`.github/workflows/ci.yml`):
+
+1. **Code Quality & Linting (`lint`)**:
+   - Enforces Python 3.10+ modern standards with `ruff`.
+   - Validates syntax tree compilation across `engine/`, `harness/`, and `finetune/`.
+2. **Matrix Regression Suite (`unit-tests`)**:
+   - Runs `pytest` with `pytest-asyncio` on Python `3.10`, `3.11`, and `3.12`.
+   - Exercises L1-L7 Topology Graph causal tracing, Episodic Memory few-shot recall, Multi-Agent Debate arbitration, and Stateful Datacenter Gym thermodynamics.
+   - Archives JUnit test reports as workflow artifacts.
+3. **Agent Evaluation Harness (`eval-harness`)**:
+   - Executes standard test suites (`harness/configs/default_eval.json`) in headless CI mode.
+   - Computes dual-core engineering metrics and LLM judge scoring.
+   - Automatically exports and persists `finetune/flywheel.db` and execution traces as build artifacts.
+4. **Production Docker Build Verification (`docker-build`)**:
+   - Compiles and validates the container image against `Dockerfile` with layer caching.
 
 ---
 

@@ -46,7 +46,7 @@ class LangGraphWorkerNode:
 
         # 2. 正常初始化并启动 ReAct 循环
         user_message = state["user_message"]
-        
+
         # 提取当前 Worker 所需的黑板上下文片段（对应原 Blackboard.get_context_summary 逻辑）
         blackboard_summary = self._get_context_summary(state)
         full_prompt = f"{self.system_prompt}\n\n{blackboard_summary}\n\n请结合上述黑板态势和用户问题，调用可用工具进行推演诊断。"
@@ -76,7 +76,7 @@ class LangGraphWorkerNode:
                     # 在最后一条助手的消息中找到触发此 danger 工具调用的 call_id
                     last_msg = conversation_messages[-1]
                     call_id = next((tc.id for tc in last_msg.tool_uses if tc.name == ev["tool"]), "unknown_call_id")
-                    
+
                     pending = PendingApproval(
                         agent_id=self.agent_id,
                         tool_name=ev["tool"],
@@ -189,7 +189,7 @@ class LangGraphWorkerNode:
             except Exception as e:
                 result_str = f"❌ 工具执行失败: {e}"
                 is_error = True
-            
+
             events.append({
                 "event": "observation",
                 "expert": self.agent_id,
@@ -225,7 +225,7 @@ class LangGraphWorkerNode:
         根据目标 Worker 角色，只截取对应的全局黑板切面信息（与 Blackboard.get_context_summary 一致）
         """
         summary_lines = [f"### 📋 全局黑板状态总线摘要 (当前态势: {state.get('overall_status', 'NORMAL')})"]
-        
+
         if self.agent_id == "L2_Cloud":
             summary_lines.append("#### 🖥️ 云原生与主机态势订阅")
             hosts = state.get("affected_hosts", [])
@@ -233,11 +233,11 @@ class LangGraphWorkerNode:
             infra_ev = [e for e in state.get("evidence_chain", []) if e["source_agent"] == "L2_Infra"]
             for ev in infra_ev:
                 summary_lines.append(f"- ⚠️ [底层动环诱因]: 靶点 {ev['affected_target']} 预计 {ev['ttf_minutes']} 分钟内崩溃 ({ev['risk_summary']})")
-                
+
         elif self.agent_id == "L2_Infra":
             summary_lines.append("#### 🗄️ 动环与基础设施态势订阅")
             summary_lines.append(f"- 环境遥测快照: {json.dumps(state.get('environment_status', {}), ensure_ascii=False)}")
-            
+
         elif self.agent_id == "L2_Sec":
             summary_lines.append("#### 🔒 安防与合规态势订阅")
             summary_lines.append(f"- 物理/逻辑锁状态: {json.dumps(state.get('security_locks', {}), ensure_ascii=False)}")
@@ -251,7 +251,7 @@ class LangGraphWorkerNode:
 
         # ── Phase 2 记忆层注入 ──────────────────────────────────────────
         from engine.memory import global_topology_graph, global_episodic_memory
-        
+
         # 1. 注入 L1-L7 空间拓扑图谱追溯 (Topology GraphRAG)
         affected_targets = state.get("affected_hosts", [])
         for target in affected_targets:

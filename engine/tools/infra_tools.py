@@ -151,13 +151,13 @@ def query_infrastructure(query: str = "") -> str:
         k8s_data = fetch_real_k8s_resources()
         if k8s_data and (k8s_data.get("nodes") or k8s_data.get("pods")):
             result_parts.append("\n=== ☸️ Kubernetes 容器集群拓扑 (Real-Time) ===")
-            
+
             # Nodes
             result_parts.append("【K8s 集群节点 (Nodes)】")
             for n in k8s_data.get("nodes", []):
                 icon = "🟢" if n["status"] == "Ready" else "🔴"
                 result_parts.append(f"{icon} 节点: {n['name']} | 状态: {n['status']}")
-                
+
             # Pods
             result_parts.append("【K8s 业务容器 (Pods - Prod Namespace)】")
             for p in k8s_data.get("pods", []):
