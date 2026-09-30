@@ -7,6 +7,7 @@ from engine.tools.base import registry, RiskLevel, ToolSpec, ApprovalRequired
 import engine.tools.infra_tools as infra_tools
 import engine.tools.cloud_tools as cloud_tools
 import engine.tools.security_tools as security_tools
+import engine.tools.vision_tools as vision_tools
 
 __all__ = [
     "registry",
@@ -15,5 +16,7 @@ __all__ = [
     "ApprovalRequired",
     "infra_tools",
     "cloud_tools",
-    "security_tools"
+    "security_tools",
+    "vision_tools",
 ]
+

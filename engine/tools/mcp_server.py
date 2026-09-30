@@ -28,6 +28,7 @@ def main():
             "predict_load_by_traffic",
             "fingerprint_early_warning",
             "visualize_topology",
+            "analyze_thermal_infrared_matrix",
         ],
         "L2_Cloud": [
             "query_infrastructure",
@@ -38,7 +39,11 @@ def main():
             "restart_server",
             "record_expert_experience",
         ],
-        "L2_Sec": ["analyze_security", "query_infrastructure"],
+        "L2_Sec": [
+            "analyze_security",
+            "query_infrastructure",
+            "inspect_visual_patrol_frame",
+        ],
     }
 
     allowed_tools = allowed_tools_map.get(args.worker, [])

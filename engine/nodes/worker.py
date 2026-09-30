@@ -300,6 +300,7 @@ infra_worker_obj = LangGraphWorkerNode(
         "predict_load_by_traffic",
         "fingerprint_early_warning",
         "visualize_topology",
+        "analyze_thermal_infrared_matrix",
     ]
 )
 
@@ -320,7 +321,11 @@ sec_worker_obj = LangGraphWorkerNode(
     agent_id="L2_Sec",
     name="L2 安防专家",
     system_prompt=_SEC_PROMPT,
-    allowed_tools=["analyze_security", "query_infrastructure"]
+    allowed_tools=[
+        "analyze_security",
+        "query_infrastructure",
+        "inspect_visual_patrol_frame",
+    ]
 )
 
 

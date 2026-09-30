@@ -27,7 +27,9 @@ Operating strictly in an **advisory and consultative role (Human-in-the-Loop)**,
 - **Multi-Agent Debate & Consensus (Phase 2)**: Resolves multi-objective conflicts between physical cooling (PUE optimization) and cloud workloads (SLA protection) via Pareto-optimal arbitration.
 - **Tiered Memory & Topology GraphRAG (Phase 2)**: Couples L1-L7 physical/logical infrastructure graph relations with episodic memory retrieval for historical incident few-shot injection.
 - **Stateful Datacenter Gym & Harness (Phase 2)**: Features an interactive thermodynamic state machine sandbox with chaos injection, moving beyond static mocks.
-- **Self-Evolving Data Flywheel**: Logs production runs, TTFT, and span traces into SQLite (`flywheel.db`), compiling high-signal datasets for SFT and DPO alignment.
+- **GRPO Verifiable Reinforcement Learning (Phase 3)**: Aligns reasoning policies via Group Relative Policy Optimization with mathematical rule-based verifiable rewards (RLVR) without neural critics.
+- **Multimodal Infrared Thermal Vision (Phase 3)**: Ingests 2D thermal camera matrices to diagnose vertical thermal stratification (ASHRAE standards) and robotic visual patrol frames.
+- **Self-Evolving Data Flywheel**: Logs production runs, TTFT, and span traces into SQLite (`flywheel.db`), compiling high-signal datasets for SFT, DPO, and GRPO alignment.
 
 ---
 
@@ -212,6 +214,9 @@ python finetune/prepare_qwen_data.py
 python finetune/train_lora.py
 # Or on Apple Silicon:
 python finetune/train_mlx_lora.py
+
+# 4. Trigger GRPO Rule-Based Verifiable Reinforcement Learning (Phase 3)
+python -m finetune.train_grpo --eval_only
 ```
 
 ---
@@ -225,7 +230,7 @@ Jin-Shu OS includes an enterprise-grade automated CI/CD pipeline running on GitH
    - Validates syntax tree compilation across `engine/`, `harness/`, and `finetune/`.
 2. **Matrix Regression Suite (`unit-tests`)**:
    - Runs `pytest` with `pytest-asyncio` on Python `3.10`, `3.11`, and `3.12`.
-   - Exercises L1-L7 Topology Graph causal tracing, Episodic Memory few-shot recall, Multi-Agent Debate arbitration, and Stateful Datacenter Gym thermodynamics.
+   - Exercises 17 automated test cases: L1-L7 Topology Graph causal tracing, Episodic Memory few-shot recall, Multi-Agent Debate arbitration, Stateful Datacenter Gym thermodynamics, GRPO RLVR mathematical reward functions, and Multimodal Infrared Thermal Vision diagnostics.
    - Archives JUnit test reports as workflow artifacts.
 3. **Agent Evaluation Harness (`eval-harness`)**:
    - Executes standard test suites (`harness/configs/default_eval.json`) in headless CI mode.
