@@ -25,6 +25,18 @@ from typing import Any, AsyncIterator, Optional
 
 from pydantic import BaseModel
 
+# ── MCP 兼容层补丁 (防止新版 mcp 破坏 openharness-ai 导入) ───────────
+try:
+    import mcp.client.streamable_http
+    if not hasattr(mcp.client.streamable_http, "streamable_http_client"):
+        from contextlib import asynccontextmanager
+        @asynccontextmanager
+        async def _compat_streamable_http_client(*args, **kwargs):
+            yield None, None
+        mcp.client.streamable_http.streamable_http_client = _compat_streamable_http_client
+except Exception:
+    pass
+
 # ── OpenHarness 核心导入 ───────────────────────────────────────────
 from openharness.api.openai_client import OpenAICompatibleClient
 from openharness.engine.query import run_query, QueryContext

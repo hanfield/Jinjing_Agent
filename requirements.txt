@@ -4,10 +4,13 @@ python-dotenv==1.0.1
 pydantic==2.8.2
 PyJWT==2.8.0
 httpx==0.27.0
+socksio>=1.0.0
 
 # ── LangGraph 驾驭工程框架 (Jin-Shu 3.0) ──────────────────────────
 langgraph>=0.2.60
 langgraph-checkpoint>=2.0.0
 langchain-core>=0.3.0
+mcp>=1.28.0,<2.0.0
 openharness-ai==0.1.9
+
 
