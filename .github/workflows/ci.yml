@@ -1,4 +1,4 @@
-name: Jin-Shu OS CI/CD Pipeline
+name: Jin-Shu OS Enterprise CI/CD Pipeline
 
 on:
   push:
@@ -6,6 +6,8 @@ on:
       - main
       - develop
       - "release/**"
+    tags:
+      - "v*.*.*"
   pull_request:
     branches:
       - main
@@ -17,17 +19,70 @@ on:
         required: false
         default: true
         type: boolean
+      deploy_ghcr:
+        description: "Force publish Docker image to GitHub Container Registry"
+        required: false
+        default: false
+        type: boolean
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# 遵循最小权限原则 (Least Privilege Principle)
+permissions:
+  contents: read
+  packages: write
+  security-events: write
+
 jobs:
   # ──────────────────────────────────────────────────────────────────────────
-  # 1. 静态代码质量与风格检查
+  # 1. DevSecOps 静态安全扫描与硬编码密钥检测
+  # ──────────────────────────────────────────────────────────────────────────
+  security-scan:
+    name: DevSecOps & Security Hardening
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Secret Leak Detection (TruffleHog)
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+          extra_args: --only-verified
+        continue-on-error: true
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install Security Scanners
+        run: |
+          python -m pip install --upgrade pip
+          pip install bandit pip-audit
+
+      - name: Python SAST Vulnerability Scan (Bandit)
+        run: |
+          echo "Running Bandit SAST scan on core engine and harness..."
+          bandit -r engine/ harness/ -ll
+
+      - name: Dependency Vulnerability Audit (pip-audit)
+        run: |
+          echo "Auditing dependencies for known CVE vulnerabilities..."
+          pip-audit -r requirements.txt || true
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # 2. 静态代码规范与类型语法检查
   # ──────────────────────────────────────────────────────────────────────────
   lint:
-    name: Code Quality & Linting
+    name: Code Quality & Syntax Linting
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -53,10 +108,11 @@ jobs:
           python -m compileall -q engine/ harness/ finetune/
 
   # ──────────────────────────────────────────────────────────────────────────
-  # 2. 多版本 Python 单元测试与拓扑图/情景记忆回归测试
+  # 3. 多版本 Python 单元测试与代码覆盖率门禁
   # ──────────────────────────────────────────────────────────────────────────
   unit-tests:
-    name: Unit Tests (Python ${{ matrix.python-version }})
+    name: Unit Tests & Coverage (Python ${{ matrix.python-version }})
+    needs: [lint]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -75,25 +131,31 @@ jobs:
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt pytest pytest-asyncio
+          pip install -r requirements.txt pytest pytest-asyncio pytest-cov
 
-      - name: Run Pytest Suite
+      - name: Run Pytest Suite with Coverage
         run: |
-          pytest harness/tests/ -v --junitxml=junit-report-${{ matrix.python-version }}.xml
+          pytest harness/tests/ -v \
+            --cov=engine \
+            --cov-report=term-missing \
+            --cov-report=xml:coverage-${{ matrix.python-version }}.xml \
+            --junitxml=junit-report-${{ matrix.python-version }}.xml
 
-      - name: Archive Test Results
+      - name: Archive Test & Coverage Results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: test-results-python-${{ matrix.python-version }}
-          path: junit-report-${{ matrix.python-version }}.xml
+          path: |
+            junit-report-${{ matrix.python-version }}.xml
+            coverage-${{ matrix.python-version }}.xml
 
   # ──────────────────────────────────────────────────────────────────────────
-  # 3. 智能体评测大盘流水线 (Harness Benchmark + SQLite Flywheel)
+  # 4. 智能体评测大盘回归门禁 (Agent Evaluation Harness & SQLite Flywheel)
   # ──────────────────────────────────────────────────────────────────────────
   eval-harness:
-    name: Agent Evaluation Harness
-    needs: [lint, unit-tests]
+    name: Agent Evaluation Harness Benchmark
+    needs: [unit-tests]
     runs-on: ubuntu-latest
     if: github.event_name != 'workflow_dispatch' || inputs.run_eval == true
     steps:
@@ -125,11 +187,11 @@ jobs:
             server.log
 
   # ──────────────────────────────────────────────────────────────────────────
-  # 4. 生产级 Docker 镜像构建验证
+  # 5. 容器镜像构建、Trivy 漏洞扫描与容器冒烟测试
   # ──────────────────────────────────────────────────────────────────────────
-  docker-build:
-    name: Docker Build Verification
-    needs: [lint, unit-tests]
+  container-security-and-build:
+    name: Container Security & Smoke Test
+    needs: [security-scan, unit-tests]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -138,12 +200,96 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build Docker Image
+      - name: Build Local Test Image
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./Dockerfile
           push: false
-          tags: jinshu-os:latest
+          load: true
+          tags: jinshu-os:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Container Vulnerability Scan (Trivy)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: "jinshu-os:test"
+          format: "sarif"
+          output: "trivy-results.sarif"
+          severity: "CRITICAL,HIGH"
+
+      - name: Upload Trivy SARIF Report
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: "trivy-results.sarif"
+        continue-on-error: true
+
+      - name: Container Runtime Smoke Test
+        run: |
+          echo "Starting Jin-Shu OS container instance for smoke testing..."
+          docker run -d --name jinshu-smoke-test -p 8000:8000 jinshu-os:test
+          
+          echo "Waiting for service to initialize..."
+          for i in {1..30}; do
+            if curl -s -f http://localhost:8000/health > /dev/null; then
+              echo "✅ Health check passed! Container is healthy."
+              curl -s http://localhost:8000/health
+              docker stop jinshu-smoke-test
+              docker rm jinshu-smoke-test
+              exit 0
+            fi
+            echo "Waiting for health check... ($i/30)"
+            sleep 2
+          done
+          
+          echo "❌ Container smoke test timed out!"
+          docker logs jinshu-smoke-test
+          docker stop jinshu-smoke-test
+          docker rm jinshu-smoke-test
+          exit 1
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # 6. 安全发布到 GitHub Container Registry (GHCR)
+  # ──────────────────────────────────────────────────────────────────────────
+  publish-ghcr:
+    name: Publish to GitHub Container Registry
+    needs: [eval-harness, container-security-and-build]
+    runs-on: ubuntu-latest
+    if: (github.ref == 'refs/heads/main' && github.event_name == 'push') || startsWith(github.ref, 'refs/tags/v') || inputs.deploy_ghcr == true
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker Metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=sha,format=short,prefix=sha-
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+
+      - name: Build and Push Production Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

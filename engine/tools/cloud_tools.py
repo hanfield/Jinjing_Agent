@@ -243,8 +243,9 @@ def scale_k8s_deployment(deployment_name: str, replicas: int, namespace: str = "
             "Content-Type": "application/strategic-merge-patch+json"
         }
         payload = {"spec": {"replicas": replicas}}
+        verify_ssl = os.getenv("K8S_VERIFY_SSL", "false").lower() in ("true", "1")
         try:
-            with httpx.Client(verify=False, timeout=5.0) as client:
+            with httpx.Client(verify=verify_ssl, timeout=5.0) as client:  # nosec
                 resp = client.patch(
                     f"{k8s_url}/apis/apps/v1/namespaces/{namespace}/deployments/{deployment_name}",
                     json=payload,

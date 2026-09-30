@@ -328,6 +328,12 @@ def get_me(user: dict = Depends(get_current_user)):
 # ── 业务路由（需登录） ───────────────────────────────────
 
 
+@app.get("/health")
+def health_check():
+    """轻量级健康检查探针接口"""
+    return {"status": "ok", "service": "jinshu-os", "version": "3.0.0"}
+
+
 @app.get("/")
 def redirect_to_ui():
     return RedirectResponse(url="/ui/")
