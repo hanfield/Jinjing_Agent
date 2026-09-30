@@ -178,16 +178,9 @@ class JinShuToolAdapter(BaseTool):
                 result = await asyncio.get_event_loop().run_in_executor(None, lambda: fn(**kwargs))
 
             res_str = str(result)
-            # 动态上下文压缩保护：阈值 3500 字符
-            if len(res_str) > 3500:
-                head = res_str[:1800]
-                tail = res_str[-1200:]
-                omitted_len = len(res_str) - 3000
-                res_str = (
-                    f"{head}\n\n"
-                    f"⚠️ ... [金枢 Phase 1 上下文动态压缩：已自动折叠中间 {omitted_len} 字符非关键冗余日志，保留首尾关键异常特征] ...\n\n"
-                    f"{tail}"
-                )
+            # 引入金枢智能语义上下文压缩引擎 (Context Compactor)
+            from engine.memory import global_context_compactor
+            res_str = global_context_compactor.reduce_tool_output(self._spec.name, res_str)
             return ToolResult(output=res_str)
         except Exception as e:
             logger.error(f"[JinShuToolAdapter] {self.name} 执行失败: {e}")
