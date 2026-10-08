@@ -1,0 +1,24 @@
+# ==============================================================================
+# 金枢 (Jin-Shu OS) - 深圳前海边缘微模块智算机房 (Tier-II 边缘智算中心)
+# ==============================================================================
+metadata:
+  datacenter_id: "DC-SHENZHEN-EDGE-02"
+  name: "深圳前海边缘AI微模块机房"
+
+preset_type: "in_row_modular"
+safety_policy: "AUTONOMOUS_OPTIMIZE"  # 允许在阈值内自主调控空调并记录审计
+
+thermodynamics:
+  target_temp_celsius: 25.0
+  max_vertical_delta_t: 4.5
+  ashrae_high_limit: 28.5
+  fan_hz_temp_slope: 0.50
+  nominal_fan_freq: 44.0
+
+assets:
+  aisle_name: "POD-EDGE-01"
+  racks:
+    - "SZ-GPU-RACK-01"
+    - "SZ-GPU-RACK-02"
+  coolers:
+    - "INROW-SZ-01"

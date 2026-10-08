@@ -1,0 +1,26 @@
+# ==============================================================================
+# 金枢 (Jin-Shu OS) - 北京金融核心数据中心 (Tier-IV 生产中心)
+# ==============================================================================
+metadata:
+  datacenter_id: "DC-BEIJING-FIN-01"
+  name: "中国金电北京核心生产机房 (A区)"
+
+preset_type: "standard_cold_aisle"
+safety_policy: "STRICT_HITL"  # 严格双人复核审批
+
+thermodynamics:
+  target_temp_celsius: 23.5
+  max_vertical_delta_t: 3.5
+  ashrae_high_limit: 27.0
+  fan_hz_temp_slope: 0.40
+  nominal_fan_freq: 40.0
+
+assets:
+  aisle_name: "AISLE-FIN-A01"
+  racks:
+    - "BJ-RACK-01"
+    - "BJ-RACK-02"
+    - "BJ-RACK-03"
+  coolers:
+    - "CRAC-BJ-01"
+    - "CRAC-BJ-02"
